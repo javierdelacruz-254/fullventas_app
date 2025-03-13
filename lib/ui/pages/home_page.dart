@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_provider.dart';
 import 'package:fullventas_app/ui/pages/login_page.dart';
+import 'package:fullventas_app/ui/widget_carrito.dart/opcionPago.dart';
 import 'package:fullventas_app/ui/widgets/carrusel_producto.dart';
 import 'package:fullventas_app/ui/widgets/categories.dart';
 import 'package:fullventas_app/ui/widgets/logo.dart';
 import 'package:fullventas_app/ui/widgets/videos_detacados.dart';
+import 'package:fullventas_app/ui/widget_carrito.dart/opcionPago.dart';
 
 class HomePage extends ConsumerWidget {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -53,7 +55,13 @@ class HomePage extends ConsumerWidget {
           Stack(
             children: [
               IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => SeleccionMetodoPago()),
+                  );
+                },
                 icon: const Icon(Icons.shopping_cart, color: Colors.white),
               ),
               Positioned(

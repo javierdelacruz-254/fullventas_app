@@ -1,6 +1,6 @@
 class AppRoutes {
   static const String baseUrl =
-      'http://192.168.1.3/mystore/gull_ventas_php_project';
+      'http://192.168.18.3/mystore/gull_ventas_php_project/';
   static const String postCalificacion =
       '$baseUrl/insert_calificacion_instructor.php';
   static const String getCategorias = '$baseUrl/get_categories.php';
