@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/carrito_provider.dart';
 import 'package:fullventas_app/config/providers/image_data_provider.dart';
 import 'package:fullventas_app/config/providers/size_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_data_provider.dart';
@@ -9,6 +11,7 @@ import 'package:fullventas_app/domain/models/fullventas_data/images_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/services_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/size_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/user_data.dart';
+import 'package:fullventas_app/ui/pages/carrito_page.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
 import 'package:fullventas_app/ui/widgets_products/video_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -25,6 +28,21 @@ class DetailProductPage extends ConsumerStatefulWidget {
 
 class DetailProductPageState extends ConsumerState<DetailProductPage> {
   String? selectedImage;
+  int cantidad = 1;
+
+  void incrementar() {
+    setState(() {
+      cantidad++;
+    });
+  }
+
+  void decrementar() {
+    if (cantidad > 1) {
+      setState(() {
+        cantidad--;
+      });
+    }
+  }
 
   Widget _builMetodosPago(String image) {
     return Column(
@@ -371,7 +389,9 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: IconButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          decrementar();
+                        },
                         icon: Icon(Icons.remove, color: Colors.white),
                       ),
                     ),
@@ -381,7 +401,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        '1', // Puedes cambiarlo dinámicamente
+                        '$cantidad', // Puedes cambiarlo dinámicamente
                         style: TextStyle(fontSize: 18, color: Colors.white),
                       ),
                     ),
@@ -394,7 +414,9 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: IconButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          incrementar();
+                        },
                         icon: Icon(Icons.add, color: Colors.white),
                       ),
                     ),
@@ -480,7 +502,20 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
               ),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    ref
+                        .read(carritoProvider.notifier)
+                        .addCarrito(widget.productData, cantidad);
+                    AwesomeDialog(
+                      context: context,
+                      dialogType: DialogType.success,
+                      animType: AnimType.scale,
+                      title: "¡Éxito!",
+                      desc: "Producto agregado al carrito",
+                      btnOkText: "Aceptar",
+                      btnOkOnPress: () {},
+                    ).show();
+                  },
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                       padding:
@@ -496,7 +531,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                         width: 12,
                       ),
                       Text(
-                        'Eliminar del carrito',
+                        'Agregar al carrito',
                         style: TextStyle(
                           fontSize: 16,
                           color: Colors.white,
@@ -511,7 +546,14 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
               ),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CarritoPage(),
+                      ),
+                    );
+                  },
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                       padding:

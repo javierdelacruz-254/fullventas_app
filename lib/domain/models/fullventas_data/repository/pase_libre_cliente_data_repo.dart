@@ -2,4 +2,5 @@ import 'package:fullventas_app/domain/models/fullventas_data/pase_libre_cliente_
 
 abstract class PaseLibreClienteDataRepo {
   Future<void> savePaseLibreCliente(PaseLibreClienteData paseLibreCliente);
+  Future<List<PaseLibreClienteData>> getPaseLibreClienteById(String nombre);
 }

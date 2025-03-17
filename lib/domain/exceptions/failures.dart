@@ -159,3 +159,12 @@ class GrupoMuscularesDataApiError implements Exception {
   @override
   String toString() => 'GrupoMuscularesDataApiError: $message';
 }
+
+class UserInfoDataApiError implements Exception {
+  final String message;
+
+  UserInfoDataApiError(this.message);
+
+  @override
+  String toString() => 'UserInfoDataApiError: $message';
+}

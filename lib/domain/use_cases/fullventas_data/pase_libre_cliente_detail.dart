@@ -7,4 +7,9 @@ class PaseLibreClienteDetailUseCase {
   Future<void> execute(PaseLibreClienteData paseLibreClienteData) async {
     await paseLibreClienteDataRepo.savePaseLibreCliente(paseLibreClienteData);
   }
+
+  Future<List<PaseLibreClienteData>> getPaseLibreClienteById(
+      String nombre) async {
+    return await paseLibreClienteDataRepo.getPaseLibreClienteById(nombre);
+  }
 }

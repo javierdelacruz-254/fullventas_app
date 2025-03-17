@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/carrito_provider.dart';
 import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_provider.dart';
+import 'package:fullventas_app/ui/pages/carrito_page.dart';
 import 'package:fullventas_app/ui/pages/login_page.dart';
-import 'package:fullventas_app/ui/widget_carrito.dart/opcionPago.dart';
+import 'package:fullventas_app/ui/pages_drawer/pase_libre_cliente.dart';
+import 'package:fullventas_app/ui/pages_drawer/perfil.dart';
+import 'package:fullventas_app/ui/pages_drawer/rutinas_cliente.dart';
 import 'package:fullventas_app/ui/widgets/carrusel_producto.dart';
 import 'package:fullventas_app/ui/widgets/categories.dart';
 import 'package:fullventas_app/ui/widgets/logo.dart';
 import 'package:fullventas_app/ui/widgets/videos_detacados.dart';
-import 'package:fullventas_app/ui/widget_carrito.dart/opcionPago.dart';
 
 class HomePage extends ConsumerWidget {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -58,8 +61,7 @@ class HomePage extends ConsumerWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => SeleccionMetodoPago()),
+                    MaterialPageRoute(builder: (context) => CarritoPage()),
                   );
                 },
                 icon: const Icon(Icons.shopping_cart, color: Colors.white),
@@ -67,13 +69,25 @@ class HomePage extends ConsumerWidget {
               Positioned(
                 right: 5,
                 top: 5,
-                child: CircleAvatar(
-                  backgroundColor: Colors.red,
-                  radius: 8,
-                  child: Text(
-                    "3", // Aquí puedes hacer dinámico el número de productos
-                    style: TextStyle(fontSize: 10, color: Colors.white),
-                  ),
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final totalCantidad = ref
+                        .watch(carritoProvider)
+                        .fold(0, (sum, item) => sum + item['cantidad'] as int);
+
+                    return totalCantidad > 0
+                        ? CircleAvatar(
+                            backgroundColor: Colors.red,
+                            radius: 8,
+                            child: Text(
+                              totalCantidad
+                                  .toString(), // Ahora muestra la cantidad real
+                              style:
+                                  TextStyle(fontSize: 10, color: Colors.white),
+                            ),
+                          )
+                        : SizedBox(); // No mostrar si el carrito está vacío
+                  },
                 ),
               ),
             ],
@@ -130,7 +144,19 @@ class HomePage extends ConsumerWidget {
                       style: const TextStyle(
                           fontSize: 18, fontWeight: FontWeight.w500),
                     ),
-                    onTap: () {},
+                    onTap: () {
+                      if (user != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => Perfil(cliente: user),
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("No hay datos de usuario")));
+                      }
+                    },
                   ),
                   if (!isGoogleUser) ...[
                     ListTile(
@@ -143,7 +169,14 @@ class HomePage extends ConsumerWidget {
                         style: const TextStyle(
                             fontSize: 18, fontWeight: FontWeight.w500),
                       ),
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PaseLibreCliente(),
+                          ),
+                        );
+                      },
                     ),
                     ListTile(
                       leading: Icon(
@@ -155,7 +188,14 @@ class HomePage extends ConsumerWidget {
                         style: const TextStyle(
                             fontSize: 18, fontWeight: FontWeight.w500),
                       ),
-                      onTap: () {},
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RutinasCliente(),
+                          ),
+                        );
+                      },
                     ),
                     ListTile(
                       leading: Icon(
