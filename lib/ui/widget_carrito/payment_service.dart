@@ -2,10 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class PaymentService {
-  final String backendUrl =
-      "http://192.168.1.2/gull_ventas_php_project-master/procces_payment.php"; // Reemplaza con la URL de tu archivo PHP
-  final String insertOrderUrl =
-      "http://192.168.1.2/gull_ventas_php_project-master/insert_order.php"; // URL del archivo PHP para insertar la orden
+  final String backendUrl = "http://192.168.1.2/gull_ventas_php_project-master/procces_payment.php"; // Reemplaza con la URL de tu archivo PHP
+  final String insertOrderUrl = "http://192.168.1.2/gull_ventas_php_project-master/insert_order.php"; // URL del archivo PHP para insertar la orden
 
   Future<Map<String, dynamic>> processPayment({
     required double amount,
@@ -30,7 +28,7 @@ class PaymentService {
       "currency_code": currency,
       "email": email,
       "source_id": sourceId,
-      "antifraud_details": {
+      "antifraud_details":{
         "first_name": firstName,
         "last_name": lastName,
       }
@@ -66,16 +64,12 @@ class PaymentService {
           return {"status": "error", "message": "Error al procesar el pago"};
         }
       } else {
-        return {
-          "status": "error",
-          "message": "Error en la respuesta del servidor"
-        };
+        return {"status": "error", "message": "Error en la respuesta del servidor"};
       }
     } catch (e) {
       return {"status": "error", "message": e.toString()};
     }
   }
-
   // Función para enviar los detalles de la orden a la base de datos
   Future<Map<String, dynamic>> _sendOrderData({
     required String orderUserId,
@@ -90,13 +84,14 @@ class PaymentService {
     required String orderMethod,
     required int orderStatus,
   }) async {
+
     final body = {
       "order_user_id": orderUserId,
       "order_client_id": orderClientId,
       "order_noti": orderNoti,
       "order_sucursal_id": orderSucursalId,
       "order_distrito": orderDistrito,
-      "amount": amount / 100,
+      "amount": amount/100,
       "order_costo_envio": orderCostoEnvio,
       "order_comision_culqui": orderComisionCulqi,
       "ordered_products": orderedProducts,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fullventas_app/ui/widget_carrito/culqi_service.dart';
 import 'package:fullventas_app/ui/widget_carrito/payment_service.dart';
-import 'package:fullventas_app/ui/widget_carrito/ticketScreen.dart';
+import 'package:fullventas_app/ui/widget_carrito/ticket_screen.dart';
 import 'package:intl/intl.dart';
 
 class PaymentScreen extends StatelessWidget {

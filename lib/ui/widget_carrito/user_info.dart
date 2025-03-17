@@ -10,7 +10,7 @@ class UserService {
 
   Future<void> fetchUserData() async {
     final String apiUrl =
-        'http://192.168.1.2/gull_ventas_php_project-master/get_user.php';
+        'http://192.168.18.3/gull_ventas_php_project-master/get_user.php';
 
     try {
       final response = await http.get(Uri.parse(apiUrl));

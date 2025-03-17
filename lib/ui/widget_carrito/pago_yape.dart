@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:fullventas_app/ui/widget_carrito/ticketScreen.dart';
+import 'package:fullventas_app/ui/widget_carrito/ticket_screen.dart';
 import 'package:intl/intl.dart';
 
 class PagoYapePage extends StatelessWidget {

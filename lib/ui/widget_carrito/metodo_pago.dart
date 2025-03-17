@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/user_provider.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
 import 'package:fullventas_app/ui/widget_carrito/libro_reclamaciones.dart';
+import 'package:fullventas_app/ui/widget_carrito/pago_yape.dart';
 import 'package:fullventas_app/ui/widget_carrito/ticket_screen.dart';
+import 'package:fullventas_app/ui/widget_carrito/pago.dart';
 
 class MetodoPago extends ConsumerStatefulWidget {
   const MetodoPago({super.key});
@@ -67,14 +69,14 @@ class MetodoPagoState extends ConsumerState<MetodoPago> {
         context,
         MaterialPageRoute(
             builder: (context) =>
-                LibroReclamaciones()), // Reemplázalo con la pantalla de tarjeta
+                PaymentScreen()), // Reemplázalo con la pantalla de tarjeta
       );
     } else if (selectedPayment == "Pago con yape") {
       Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) =>
-                LibroReclamaciones()), // Reemplázalo con la pantalla de Yape
+                PagoYapePage()), // Reemplázalo con la pantalla de Yape
       );
     }
   }
