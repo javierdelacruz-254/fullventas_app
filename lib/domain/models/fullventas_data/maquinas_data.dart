@@ -18,6 +18,7 @@ class MaquinasData {
     this.estado,
     this.idGrupo,
     this.userId,
+    this.nombre_musculo,
   });
 
   final int? idMaquina;
@@ -29,6 +30,7 @@ class MaquinasData {
   final String? estado; // Activo | Inactivo
   final int? idGrupo;
   final int? userId;
+  final String? nombre_musculo;
 
   factory MaquinasData.fromJson(Map<String, dynamic> json) => MaquinasData(
         idMaquina: int.tryParse(json['id_maquina'].toString()) ?? 0,
@@ -40,6 +42,7 @@ class MaquinasData {
         estado: json['estado'] as String?,
         idGrupo: int.tryParse(json['id_grupo'].toString()) ?? 0,
         userId: int.tryParse(json['user_id'].toString()) ?? 0,
+        nombre_musculo: json['nombre_musculo'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -52,5 +55,6 @@ class MaquinasData {
         "estado": estado,
         "id_grupo": idGrupo,
         "user_id": userId,
+        "nombre_musculo": nombre_musculo,
       };
 }

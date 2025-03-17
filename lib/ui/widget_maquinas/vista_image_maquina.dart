@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/maquinas_data.dart';
 import 'package:photo_view/photo_view.dart';
@@ -48,7 +50,8 @@ class VistaImageMaquina extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                maquina.estado!,
+                utf8.decode(latin1
+                    .encode("Musculo trabajado: ${maquina.nombre_musculo!}")),
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 10),

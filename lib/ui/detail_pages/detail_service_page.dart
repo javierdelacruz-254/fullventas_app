@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/carrito_provider.dart';
 import 'package:fullventas_app/config/providers/image_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/images_data.dart';
@@ -387,7 +389,20 @@ class DetailServicePageState extends ConsumerState<DetailServicePage> {
               ),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    ref
+                        .read(carritoProvider.notifier)
+                        .addCarrito(widget.servicesData, 1);
+                    AwesomeDialog(
+                      context: context,
+                      dialogType: DialogType.success,
+                      animType: AnimType.scale,
+                      title: "¡Éxito!",
+                      desc: "Servicio agregado al carrito",
+                      btnOkText: "Aceptar",
+                      btnOkOnPress: () {},
+                    ).show();
+                  },
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                       padding:

@@ -38,4 +38,15 @@ class AppRoutes {
   static const String getVideos = '$baseUrl/get_videos.php';
   static String getMusculosById(int idGrupo) =>
       '$baseUrl/get_musculos.php?id_grupo=$idGrupo';
+  static String getPaseLibreCliente(String nombre) =>
+      '$baseUrl/get_clientes_paselibre.php?nombre=$nombre';
+  static String getRutinas(int idCliente) =>
+      '$baseUrl/get_rutinas.php?id_cliente=$idCliente';
+  static const String getUserInfo = '$baseUrl/get_info_user_gym.php';
+  static const String getDepartamentos =
+      '$baseUrl/get_departamentos.php?tipo=departamentos';
+  static String getProvincias(String idDepartamento) =>
+      '$baseUrl/get_departamentos.php?tipo=provincias&id_departamento=$idDepartamento';
+  static String getDistritos(String idProvincia) =>
+      '$baseUrl/get_departamentos.php?tipo=distritos&id_provincia=$idProvincia';
 }

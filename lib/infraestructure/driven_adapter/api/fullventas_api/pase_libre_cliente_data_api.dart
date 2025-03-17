@@ -26,4 +26,19 @@ class PaseLibreClienteDataApi extends PaseLibreClienteDataRepo {
       throw Exception("Error en la peticion: $e");
     }
   }
+
+  @override
+  Future<List<PaseLibreClienteData>> getPaseLibreClienteById(
+      String nombre) async {
+    final response =
+        await http.get(Uri.parse(AppRoutes.getPaseLibreCliente(nombre)));
+    if (response.statusCode == 200) {
+      final paseLibreClienteData = paseLibreClienteDataFromJson(response.body);
+      print(response.body);
+      return paseLibreClienteData;
+    } else {
+      throw Exception(
+          'Error al obtener los datos. Código de estado ${response.statusCode}');
+    }
+  }
 }
