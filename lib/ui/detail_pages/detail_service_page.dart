@@ -8,6 +8,7 @@ import 'package:fullventas_app/config/providers/user_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/images_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/services_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/user_data.dart';
+import 'package:fullventas_app/ui/pages/carrito_page.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
@@ -50,7 +51,10 @@ class DetailServicePageState extends ConsumerState<DetailServicePage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Colors.white,
+          ),
           onPressed: () {
             Navigator.pop(context); // Regresa a la pantalla anterior
           },
@@ -58,7 +62,10 @@ class DetailServicePageState extends ConsumerState<DetailServicePage> {
         title: SizedBox(), // No se muestra texto en el AppBar
         actions: [
           IconButton(
-            icon: Icon(Icons.home),
+            icon: Icon(
+              Icons.home,
+              color: Colors.white,
+            ),
             onPressed: () {
               Navigator.pushReplacement(
                 context,
@@ -68,14 +75,45 @@ class DetailServicePageState extends ConsumerState<DetailServicePage> {
               );
             },
           ),
-          IconButton(
-            icon: Icon(Icons.shopping_cart),
-            onPressed: () {
-              // Lógica para navegar al carrito, si es necesario
-            },
-          ),
+          Stack(
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CarritoPage()),
+                  );
+                },
+                icon: const Icon(Icons.shopping_cart, color: Colors.white),
+              ),
+              Positioned(
+                right: 5,
+                top: 5,
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final totalCantidad = ref
+                        .watch(carritoProvider)
+                        .fold(0, (sum, item) => sum + item['cantidad'] as int);
+
+                    return totalCantidad > 0
+                        ? CircleAvatar(
+                            backgroundColor: Colors.red,
+                            radius: 8,
+                            child: Text(
+                              totalCantidad
+                                  .toString(), // Ahora muestra la cantidad real
+                              style:
+                                  TextStyle(fontSize: 10, color: Colors.white),
+                            ),
+                          )
+                        : SizedBox(); // No mostrar si el carrito está vacío
+                  },
+                ),
+              ),
+            ],
+          )
         ],
-        backgroundColor: Colors.blue,
+        backgroundColor: Color(0xFF3391FA),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -153,7 +191,7 @@ class DetailServicePageState extends ConsumerState<DetailServicePage> {
                                   decoration: BoxDecoration(
                                     border: Border.all(
                                       color: isSelected
-                                          ? Colors.blue
+                                          ? Color(0xFF3391FA)
                                           : Colors.transparent,
                                       width: 3, // Grosor del borde
                                     ),
@@ -356,7 +394,7 @@ class DetailServicePageState extends ConsumerState<DetailServicePage> {
                   alignment: Alignment.center,
                   child: Text(
                     widget.servicesData.profesor?.isNotEmpty == true
-                        ? widget.servicesData.horario!
+                        ? widget.servicesData.profesor!
                         : 'Sin profesor',
                   ),
                 ),
@@ -390,21 +428,37 @@ class DetailServicePageState extends ConsumerState<DetailServicePage> {
               Center(
                 child: ElevatedButton(
                   onPressed: () {
-                    ref
-                        .read(carritoProvider.notifier)
-                        .addCarrito(widget.servicesData, 1);
-                    AwesomeDialog(
-                      context: context,
-                      dialogType: DialogType.success,
-                      animType: AnimType.scale,
-                      title: "¡Éxito!",
-                      desc: "Servicio agregado al carrito",
-                      btnOkText: "Aceptar",
-                      btnOkOnPress: () {},
-                    ).show();
+                    final carrito = ref.read(carritoProvider);
+                    final existe = carrito.any((item) =>
+                        item['producto'].id == widget.servicesData.id);
+
+                    if (existe) {
+                      AwesomeDialog(
+                        context: context,
+                        dialogType: DialogType.warning,
+                        animType: AnimType.scale,
+                        title: "Atención",
+                        desc: "El servicio ya esta en el carrito",
+                        btnOkText: "Aceptar",
+                        btnOkOnPress: () {},
+                      ).show();
+                    } else {
+                      ref
+                          .read(carritoProvider.notifier)
+                          .addCarrito(widget.servicesData, 1);
+                      AwesomeDialog(
+                        context: context,
+                        dialogType: DialogType.success,
+                        animType: AnimType.scale,
+                        title: "¡Éxito!",
+                        desc: "Servicio agregado al carrito",
+                        btnOkText: "Aceptar",
+                        btnOkOnPress: () {},
+                      ).show();
+                    }
                   },
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: Color(0xFF3391FA),
                       padding:
                           EdgeInsets.symmetric(vertical: 12, horizontal: 40),
                       shape: RoundedRectangleBorder(

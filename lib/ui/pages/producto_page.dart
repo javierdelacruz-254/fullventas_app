@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/carrito_provider.dart';
 import 'package:fullventas_app/config/providers/products_data_provider.dart';
+import 'package:fullventas_app/ui/pages/carrito_page.dart';
 import 'package:fullventas_app/ui/widgets_products/carrusel_product.dart';
 import 'package:fullventas_app/ui/widgets_products/list_product.dart';
 
@@ -53,13 +55,43 @@ class ProductoPage extends ConsumerWidget {
               color: Colors.white,
             ),
           ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.shopping_cart,
-              color: Colors.white,
-            ),
-          ),
+          Stack(
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CarritoPage()),
+                  );
+                },
+                icon: const Icon(Icons.shopping_cart, color: Colors.white),
+              ),
+              Positioned(
+                right: 5,
+                top: 5,
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final totalCantidad = ref
+                        .watch(carritoProvider)
+                        .fold(0, (sum, item) => sum + item['cantidad'] as int);
+
+                    return totalCantidad > 0
+                        ? CircleAvatar(
+                            backgroundColor: Colors.red,
+                            radius: 8,
+                            child: Text(
+                              totalCantidad
+                                  .toString(), // Ahora muestra la cantidad real
+                              style:
+                                  TextStyle(fontSize: 10, color: Colors.white),
+                            ),
+                          )
+                        : SizedBox(); // No mostrar si el carrito está vacío
+                  },
+                ),
+              ),
+            ],
+          )
         ],
       ),
       body: SingleChildScrollView(

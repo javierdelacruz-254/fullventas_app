@@ -1,9 +1,12 @@
 import 'dart:io';
 
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/reclamo_data_provider.dart';
 import 'package:fullventas_app/config/providers/ubigeo_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_provider.dart';
+import 'package:fullventas_app/domain/models/fullventas_data/reclamo_data.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart' as path;
 import 'package:image_picker/image_picker.dart';
@@ -24,6 +27,7 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
       TextEditingController();
   final TextEditingController nombresController = TextEditingController();
   final TextEditingController apellidosController = TextEditingController();
+  final TextEditingController tipoRespuestaController = TextEditingController();
   final TextEditingController direccionController = TextEditingController();
   final TextEditingController telefonoController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
@@ -50,6 +54,7 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
   void initState() {
     // TODO: implement initState
     super.initState();
+    tipoRespuestaController.text = "Correo Electrónico";
     Future.delayed(Duration.zero, () {
       final cliente = ref.read(userProvider);
       if (cliente != null) {
@@ -75,6 +80,66 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
         nombreArchivo = path.basename(_imagenReclamo!.path);
       });
       print("Archivo seleccionado: $nombreArchivo");
+    }
+  }
+
+  Future<void> registrarReclamo() async {
+    if (!_formKey.currentState!.validate()) {
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.warning,
+        animType: AnimType.scale,
+        title: "Campos incompletos",
+        desc: "Por favor, completa todos los campos obligatorios.",
+        btnOkOnPress: () {},
+      ).show();
+      return;
+    }
+
+    final ReclamoData reclamo = ReclamoData(
+      tipoDocumento: tipoDocumento,
+      numeroDocumento: numeroDocumentoController.text,
+      nombresCompletos: nombresController.text,
+      apellidos: apellidosController.text,
+      tipoRespuesta: tipoRespuestaController.text,
+      fecha: DateTime.parse(fechaActual),
+      direccion: direccionController.text,
+      departamento: departamentoSeleccionado,
+      provincia: provinciaSeleccionada,
+      distrito: distritoSeleccionado,
+      telefono: telefonoController.text,
+      email: emailController.text,
+      ordenCompra: ordenCompraController.text,
+      bienContratado: identificacionBien,
+      montoReclamado: double.tryParse(montoController.text) ?? 0.0,
+      descripcion: descripcionController.text,
+      fechaComunicacion: DateTime.parse(fechaRespuesta),
+      tipo: tipoReclamo,
+      motivo: motivoReclamo,
+      detalleReclamo: detalleReclamoController.text,
+      pedido: pedidoController.text,
+      imagen: nombreArchivo,
+    );
+
+    try {
+      await ref.read(reclamoDataProvider).execute(reclamo);
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.success,
+        animType: AnimType.scale,
+        title: "Éxito",
+        desc: "✅ Reclamo enviado correctamente.",
+        btnOkOnPress: () {},
+      ).show();
+    } catch (e) {
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.error,
+        animType: AnimType.scale,
+        title: "Error",
+        desc: "❌ Ocurrió un error al enviar el reclamo. Inténtalo nuevamente.",
+        btnOkOnPress: () {},
+      ).show();
     }
   }
 
@@ -126,21 +191,50 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
                 ),
                 campoTexto("N° de Documento", "Ingrese su documento",
                     numeroDocumentoController),
-                campoTexto("Nombres", "Ingrese su nombre", nombresController),
-                campoTexto(
-                    "Apellidos", "Ingrese sus apellidos", apellidosController),
                 TextFormField(
-                  initialValue: 'Correo electrónico',
+                  controller: nombresController,
+                  decoration: InputDecoration(
+                      labelText: "Nombres",
+                      hintText: "Ingrese sus nombres completos"),
+                  validator: (value) {
+                    if (value!.isEmpty) return "Este campo es obligatorio";
+                    return null;
+                  },
+                  enabled: cliente == null,
+                ),
+                TextFormField(
+                  controller: apellidosController,
+                  decoration: InputDecoration(
+                      labelText: "Apellidos",
+                      hintText: "Ingrese sus apellidos completos"),
+                  validator: (value) {
+                    if (value!.isEmpty) return "Este campo es obligatorio";
+                    return null;
+                  },
+                  enabled: cliente == null,
+                ),
+                TextFormField(
+                  controller: tipoRespuestaController,
                   decoration: InputDecoration(labelText: "Tipo de Respuesta"),
                   readOnly: true,
+                  enabled: false,
                 ),
                 TextFormField(
                   initialValue: fechaActual,
                   decoration: InputDecoration(labelText: "Fecha"),
                   readOnly: true,
+                  enabled: false,
                 ),
-                campoTexto(
-                    "Dirección", "Ingrese su dirección", direccionController),
+                TextFormField(
+                  controller: direccionController,
+                  decoration: InputDecoration(
+                      labelText: "Direccion", hintText: "Ingrese su direccion"),
+                  validator: (value) {
+                    if (value!.isEmpty) return "Este campo es obligatorio";
+                    return null;
+                  },
+                  enabled: cliente == null,
+                ),
                 //ComboBox Departamento
                 departamentoProvider.when(
                   data: (departamentos) => DropdownButtonFormField<String>(
@@ -172,23 +266,37 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
                   data: (provincias) => DropdownButtonFormField<String>(
                     value: provinciaSeleccionada,
                     decoration: InputDecoration(labelText: "Provincia"),
-                    items: provincias.map((prov) {
-                      return DropdownMenuItem(
-                        value: prov.id,
-                        child: Text(prov.name!),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        provinciaSeleccionada = value;
-                        distritoSeleccionado = null;
-                      });
-                    },
+                    items: provincias.isEmpty
+                        ? []
+                        : provincias.map((prov) {
+                            return DropdownMenuItem(
+                              value: prov.id,
+                              child: Text(prov.name!),
+                            );
+                          }).toList(),
+                    onChanged: provincias.isEmpty
+                        ? null
+                        : (value) {
+                            setState(() {
+                              provinciaSeleccionada = value;
+                              distritoSeleccionado = null;
+                            });
+                          },
                     validator: (value) =>
                         value == null ? "Seleccione una provincia" : null,
                   ),
-                  loading: () => CircularProgressIndicator(),
-                  error: (err, stack) => Text("Error al cargar provincias"),
+                  loading: () => DropdownButtonFormField<String>(
+                    value: null,
+                    decoration: InputDecoration(labelText: "Provincia"),
+                    items: [],
+                    onChanged: null,
+                  ),
+                  error: (err, stack) => DropdownButtonFormField<String>(
+                    value: null,
+                    decoration: InputDecoration(labelText: "Provincia"),
+                    items: [],
+                    onChanged: null,
+                  ),
                 ),
 
                 // ComboBox de Distrito
@@ -196,28 +304,63 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
                   data: (distritos) => DropdownButtonFormField<String>(
                     value: distritoSeleccionado,
                     decoration: InputDecoration(labelText: "Distrito"),
-                    items: distritos.map((dist) {
-                      return DropdownMenuItem(
-                          value: dist.id,
-                          child: Text(
-                            dist.name!,
-                          ));
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        distritoSeleccionado = value;
-                      });
-                    },
+                    items: distritos.isEmpty
+                        ? []
+                        : distritos.map((dist) {
+                            return DropdownMenuItem(
+                                value: dist.id,
+                                child: Text(
+                                  dist.name!,
+                                ));
+                          }).toList(),
+                    onChanged: distritos.isEmpty
+                        ? null
+                        : (value) {
+                            setState(() {
+                              distritoSeleccionado = value;
+                            });
+                          },
                     validator: (value) =>
                         value == null ? "Seleccione un distrito" : null,
                   ),
-                  loading: () => CircularProgressIndicator(),
-                  error: (err, stack) => Text("Error al cargar distritos"),
+                  loading: () => DropdownButtonFormField<String>(
+                    value: null,
+                    decoration: InputDecoration(labelText: "Distrito"),
+                    items: [],
+                    onChanged: null,
+                  ),
+                  error: (err, stack) => DropdownButtonFormField<String>(
+                    value: null,
+                    decoration: InputDecoration(labelText: "Distrito"),
+                    items: [],
+                    onChanged: null,
+                  ),
                 ),
 
-                campoTexto("Teléfono", "Ingrese su número", telefonoController),
-                campoTexto("Email", "Ingrese su correo", emailController),
-                SizedBox(height: 10),
+                TextFormField(
+                  controller: telefonoController,
+                  decoration: InputDecoration(
+                      labelText: "Teléfono",
+                      hintText: "Ingrese su número de teléfono"),
+                  validator: (value) {
+                    if (value!.isEmpty) return "Este campo es obligatorio";
+                    return null;
+                  },
+                  enabled: cliente == null,
+                ),
+                TextFormField(
+                  controller: emailController,
+                  decoration: InputDecoration(
+                      labelText: "Email",
+                      hintText: "Ingrese su correo electronico"),
+                  validator: (value) {
+                    if (value!.isEmpty) return "Este campo es obligatorio";
+                    return null;
+                  },
+                  enabled: cliente == null,
+                ),
+
+                SizedBox(height: 40),
 
                 // Sección 2: Datos de Compra
                 Text("Datos de Compra",
@@ -225,6 +368,9 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
                         TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 campoTexto("Orden de compra", "Ingrese la orden",
                     ordenCompraController),
+                SizedBox(
+                  height: 10,
+                ),
                 Text("Identificación del bien contratado"),
                 Row(
                   children: [
@@ -247,7 +393,7 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
                 campoTexto("Monto S/", "Ingrese el monto", montoController),
                 campoTexto("Descripción", "Nombre del producto o servicio",
                     descripcionController),
-                SizedBox(height: 10),
+                SizedBox(height: 40),
 
                 // Sección 3: Datos del Reclamo
                 Text("Datos del Reclamo",
@@ -257,6 +403,10 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
                   initialValue: fechaRespuesta,
                   decoration: InputDecoration(labelText: "Fecha de respuesta"),
                   readOnly: true,
+                  enabled: false,
+                ),
+                SizedBox(
+                  height: 10,
                 ),
                 Text("Tipo"),
                 Row(
@@ -302,20 +452,23 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
                         TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                 SizedBox(height: 5),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: seleccionarImagen,
                   child: Center(
                     child: Text("Seleccionar imagen",
-                        style: TextStyle(color: Colors.white)),
+                        style: TextStyle(color: Colors.black)),
                   ),
                 ),
                 if (_imagenReclamo != null)
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Image.file(_imagenReclamo!, height: 150),
+                  Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Image.file(_imagenReclamo!, height: 150),
+                    ),
                   ),
-                SizedBox(height: 20),
+
+                SizedBox(height: 40),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: registrarReclamo,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color(0xFF3391FA),
                     padding: EdgeInsets.symmetric(vertical: 15.0),

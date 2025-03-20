@@ -49,4 +49,7 @@ class AppRoutes {
       '$baseUrl/get_departamentos.php?tipo=provincias&id_departamento=$idDepartamento';
   static String getDistritos(String idProvincia) =>
       '$baseUrl/get_departamentos.php?tipo=distritos&id_provincia=$idProvincia';
+  static const String postReclamo = '$baseUrl/insert_reclamo.php';
+  static String getEnvios(int sucursalId) =>
+      '$baseUrl/get_enviosBy.php?sucursal_id=$sucursalId';
 }

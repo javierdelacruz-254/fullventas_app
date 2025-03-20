@@ -4,7 +4,11 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/carrito_provider.dart';
+import 'package:fullventas_app/config/providers/envios_data_provider.dart';
 import 'package:fullventas_app/config/providers/sucursales_data_Provder.dart';
+import 'package:fullventas_app/domain/models/fullventas_data/envios_data.dart';
+import 'package:fullventas_app/domain/models/fullventas_data/estrategia_ventas_data.dart';
+import 'package:fullventas_app/domain/models/fullventas_data/planes_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/services_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/sucursales_data.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
@@ -20,6 +24,13 @@ class CarritoPage extends ConsumerStatefulWidget {
 
 class CarritoPageState extends ConsumerState<CarritoPage> {
   double envio = 0.00;
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    envio = 0.00;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +57,40 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
           ),
         ),
         actions: [
+          IconButton(
+            onPressed: () {
+              if (ref.read(carritoProvider).isEmpty) {
+                AwesomeDialog(
+                  context: context,
+                  dialogType: DialogType.info,
+                  animType: AnimType.scale,
+                  title: "Carrito vacío",
+                  desc: "No hay productos en el carrito. Agrega algo primero.",
+                  btnOkText: "OK",
+                  btnOkOnPress: () {},
+                ).show();
+              } else {
+                AwesomeDialog(
+                  context: context,
+                  dialogType: DialogType.warning,
+                  animType: AnimType.scale,
+                  title: "¿Quieres limpiar todo?",
+                  desc:
+                      "Si eliminar todo los productos quedara vacio el carrito.",
+                  btnCancelText: "No",
+                  btnCancelOnPress: () {},
+                  btnOkText: "Sí, eliminar",
+                  btnOkOnPress: () {
+                    ref.read(carritoProvider.notifier).limpiarCarrito();
+                  },
+                ).show();
+              }
+            },
+            icon: Icon(
+              Icons.cleaning_services_rounded,
+              color: Colors.white,
+            ),
+          ),
           IconButton(
             icon: Icon(Icons.home, color: Colors.white),
             onPressed: () {
@@ -98,6 +143,11 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
   // 🛍 Vista cuando hay productos en el carrito
   Widget _buildCarrito(List<Map<String, dynamic>> carrito, double subtotal,
       double envio, double total) {
+    bool hayProductos = carrito.any((item) {
+      final dynamic producto = item['producto'];
+      return (producto is ServicesData && producto.category == 1) ||
+          (producto is EstrategiaVentasData && producto.tipo_producto == 1);
+    });
     return Column(
       children: [
         Expanded(
@@ -105,9 +155,31 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
             itemCount: carrito.length,
             itemBuilder: (context, index) {
               final item = carrito[index];
-              final ServicesData producto = item['producto'];
+              final dynamic producto = item['producto'];
               final int cantidad = item['cantidad'];
               final double subtotalItem = item['subtotal'];
+
+              String? imageUrl;
+              String? title;
+
+              bool esServicio =
+                  producto is ServicesData && producto.category == 2;
+              bool esPlan = producto is PlanesData;
+              bool esProducto =
+                  (producto is ServicesData && producto.category == 1) ||
+                      (producto is EstrategiaVentasData &&
+                          producto.tipo_producto == 1);
+
+              if (producto is ServicesData) {
+                imageUrl = producto.imageName;
+                title = producto.title!;
+              } else if (producto is PlanesData) {
+                imageUrl = producto.image_name;
+                title = producto.title!;
+              } else if (producto is EstrategiaVentasData) {
+                imageUrl = producto.image_name;
+                title = producto.title;
+              }
 
               return Card(
                 margin: EdgeInsets.all(10),
@@ -119,10 +191,18 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
                   child: Row(
                     children: [
                       Image.network(
-                        producto.imageName ?? '',
+                        imageUrl ?? '',
                         width: 80,
                         height: 80,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Image.asset(
+                            'assets/img/placeholder.png', // Asegúrate de tener esta imagen en tu carpeta de assets
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                          );
+                        },
                       ),
                       SizedBox(width: 10),
                       Expanded(
@@ -130,11 +210,13 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              utf8.decode(latin1.encode(producto.title ?? '')),
+                              utf8.decode(latin1.encode(title ?? '')),
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             SizedBox(height: 5),
                             Text(
@@ -199,60 +281,62 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
                           SizedBox(
                             height: 10,
                           ),
-                          Row(
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.black),
-                                  borderRadius: BorderRadius.circular(50),
+                          if (esProducto) ...[
+                            Row(
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.black),
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  child: IconButton(
+                                    onPressed: () {
+                                      if (cantidad > 1) {
+                                        ref
+                                            .read(carritoProvider.notifier)
+                                            .addCarrito(producto, -1);
+                                      } else {
+                                        AwesomeDialog(
+                                          context: context,
+                                          dialogType: DialogType.warning,
+                                          animType: AnimType.scale,
+                                          title: "¿Eliminar producto?",
+                                          desc:
+                                              "Si reduces la cantidad a 0, el producto será eliminado.",
+                                          btnCancelText: "No",
+                                          btnCancelOnPress: () {},
+                                          btnOkText: "Sí, eliminar",
+                                          btnOkOnPress: () {
+                                            ref
+                                                .read(carritoProvider.notifier)
+                                                .eliminarCarrito(producto);
+                                          },
+                                        ).show();
+                                      }
+                                    },
+                                    icon: Icon(Icons.remove, size: 18),
+                                  ),
                                 ),
-                                child: IconButton(
-                                  onPressed: () {
-                                    if (cantidad > 1) {
+                                SizedBox(
+                                  width: 10,
+                                ),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.black),
+                                    borderRadius: BorderRadius.circular(50),
+                                  ),
+                                  child: IconButton(
+                                    onPressed: () {
                                       ref
                                           .read(carritoProvider.notifier)
-                                          .addCarrito(producto, -1);
-                                    } else {
-                                      AwesomeDialog(
-                                        context: context,
-                                        dialogType: DialogType.warning,
-                                        animType: AnimType.scale,
-                                        title: "¿Eliminar producto?",
-                                        desc:
-                                            "Si reduces la cantidad a 0, el producto será eliminado.",
-                                        btnCancelText: "No",
-                                        btnCancelOnPress: () {},
-                                        btnOkText: "Sí, eliminar",
-                                        btnOkOnPress: () {
-                                          ref
-                                              .read(carritoProvider.notifier)
-                                              .eliminarCarrito(producto);
-                                        },
-                                      ).show();
-                                    }
-                                  },
-                                  icon: Icon(Icons.remove, size: 18),
+                                          .addCarrito(producto, 1);
+                                    },
+                                    icon: Icon(Icons.add, size: 18),
+                                  ),
                                 ),
-                              ),
-                              SizedBox(
-                                width: 10,
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.black),
-                                  borderRadius: BorderRadius.circular(50),
-                                ),
-                                child: IconButton(
-                                  onPressed: () {
-                                    ref
-                                        .read(carritoProvider.notifier)
-                                        .addCarrito(producto, 1);
-                                  },
-                                  icon: Icon(Icons.add, size: 18),
-                                ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
+                          ]
                         ],
                       ),
                     ],
@@ -277,23 +361,28 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
                 ],
               ),
               SizedBox(height: 5),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("Envío:", style: TextStyle(fontSize: 16)),
-                  ElevatedButton(
-                      onPressed: () async {
-                        double nuevoEnvio = await dialogCalcular(context, ref);
-                        setState(() {
-                          envio = nuevoEnvio;
-                        });
-                      },
-                      child: Text("Calcular")),
-                  Text(
-                    "S/. ${envio.toStringAsFixed(2)}",
-                  ),
-                ],
-              ),
+              if (hayProductos) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Envío:", style: TextStyle(fontSize: 16)),
+                    ElevatedButton(
+                        onPressed: () async {
+                          double nuevoEnvio =
+                              await dialogCalcular(context, ref);
+                          setState(() {
+                            envio = nuevoEnvio;
+                            print(
+                                "Nuevo valor de envío en CarritoPageState: S/. $envio");
+                          });
+                        },
+                        child: Text("Calcular")),
+                    Text(
+                      "S/. ${envio.toStringAsFixed(2)}",
+                    ),
+                  ],
+                ),
+              ],
               SizedBox(height: 5),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -345,6 +434,8 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
     int? sucursalSeleccionada;
     String? ciudadSeleccionada;
 
+    List<EnviosData> ciudadesDisponible = [];
+
     return await showDialog<double>(
           context: context,
           barrierDismissible: false,
@@ -392,12 +483,10 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
                           RadioListTile(
                             title: Text("Delivery"),
                             value: "delivery",
-                            groupValue:
-                                opcionSeleccionada, // Puedes hacer que sea dinámico
+                            groupValue: opcionSeleccionada,
                             onChanged: (value) {
                               setState(() {
                                 opcionSeleccionada = value.toString();
-                                envio = 15.00;
                               });
                             },
                           ),
@@ -408,7 +497,6 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
                             onChanged: (value) {
                               setState(() {
                                 opcionSeleccionada = value.toString();
-                                envio = 0.00;
                               });
                             },
                           ),
@@ -437,13 +525,32 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
                                 decoration:
                                     InputDecoration(labelText: "Sucursal"),
                                 value: sucursalSeleccionada,
-                                onChanged: opcionSeleccionada == "sucursal"
-                                    ? null
-                                    : (value) {
-                                        setState(() {
-                                          sucursalSeleccionada = value;
-                                        });
-                                      },
+                                onChanged: (value) {
+                                  setState(() {
+                                    sucursalSeleccionada = value;
+                                    ciudadSeleccionada = null;
+                                    envio = 0.00;
+                                    ciudadesDisponible = [];
+                                  });
+
+                                  if (value != null) {
+                                    final EnviosDetailUseCase =
+                                        ref.read(enviosDataProvider);
+
+                                    EnviosDetailUseCase.getEnviosById(value)
+                                        .then((envioList) {
+                                      setState(() {
+                                        ciudadesDisponible = envioList;
+                                        ciudadSeleccionada = null;
+                                      });
+                                    }).catchError((error) {
+                                      setState(() {
+                                        ciudadSeleccionada = null;
+                                        ciudadesDisponible = [];
+                                      });
+                                    });
+                                  }
+                                },
                                 items: snapshot.data!
                                     .map((sucursal) => DropdownMenuItem(
                                           value: sucursal.id,
@@ -457,16 +564,28 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
                       SizedBox(height: 10),
 
                       // Selector de ciudad
-                      DropdownButton<String>(
+
+                      DropdownButtonFormField<String>(
                         isExpanded: true,
-                        value: "Lima", // Puedes cambiarlo dinámicamente
+                        decoration: InputDecoration(labelText: "Ciudad"),
+                        value: ciudadSeleccionada,
                         onChanged: opcionSeleccionada == "sucursal"
-                            ? null // Deshabilitado si es sucursal
-                            : (value) {},
-                        items: ["Lima", "Callao", "Arequipa"]
+                            ? null
+                            : (value) {
+                                setState(() {
+                                  ciudadSeleccionada = value;
+                                  final envioSeleccionado =
+                                      ciudadesDisponible.firstWhere(
+                                          (ciudad) => ciudad.distrito == value);
+                                  envio = envioSeleccionado.precio!;
+                                  print(
+                                      "Ciudad seleccionada: $ciudadSeleccionada, Envío: S/. $envio");
+                                });
+                              },
+                        items: ciudadesDisponible
                             .map((ciudad) => DropdownMenuItem(
-                                  value: ciudad,
-                                  child: Text(ciudad),
+                                  value: ciudad.distrito,
+                                  child: Text(ciudad.distrito!),
                                 ))
                             .toList(),
                       ),
@@ -483,6 +602,7 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
                   actions: [
                     TextButton(
                       onPressed: () {
+                        print("Envío final seleccionado: S/. $envio");
                         Navigator.of(context).pop(envio);
                       },
                       child: Text("Aceptar", style: TextStyle(fontSize: 16)),

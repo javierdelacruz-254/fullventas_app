@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/user_provider.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
-import 'package:fullventas_app/ui/widget_carrito/libro_reclamaciones.dart';
-import 'package:fullventas_app/ui/widget_carrito/ticket_screen.dart';
+import 'package:fullventas_app/ui/pages/libro_reclamaciones.dart';
 
 class MetodoPago extends ConsumerStatefulWidget {
   const MetodoPago({super.key});
@@ -44,38 +43,6 @@ class MetodoPagoState extends ConsumerState<MetodoPago> {
         btnOkOnPress: () {},
       ).show();
       return;
-    }
-
-    if (selectedPayment == "Pago en el mismo Gimnasio") {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) => TicketScreen(
-                distrito: "",
-                total: 0.00,
-                userData: {},
-                fechaHora: "",
-                productos: [],
-                orderCostoEnvio: 0.0,
-                orderStatus: "",
-                orderID: 0,
-                orderMethod: "",
-                sucursalTicket: {})), // Reemplázalo con la pantalla adecuada
-      );
-    } else if (selectedPayment == "Pago con tarjeta débito, crédito, etc") {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                LibroReclamaciones()), // Reemplázalo con la pantalla de tarjeta
-      );
-    } else if (selectedPayment == "Pago con yape") {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                LibroReclamaciones()), // Reemplázalo con la pantalla de Yape
-      );
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/descuentos_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/descuentos_data.dart';
+import 'package:fullventas_app/ui/detail_pages/detail_descuento_page.dart';
 
 class ListDescuentos extends ConsumerWidget {
   const ListDescuentos({super.key});
@@ -42,7 +43,15 @@ class ListDescuentos extends ConsumerWidget {
                         itemBuilder: (context, index) {
                           final descuento = descuentos[index];
                           return GestureDetector(
-                            onTap: () {},
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => DetailDescuentoPage(
+                                      descuentosData: descuento),
+                                ),
+                              );
+                            },
                             child: Card(
                               margin: EdgeInsets.all(8),
                               shape: RoundedRectangleBorder(

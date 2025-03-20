@@ -1,32 +1,27 @@
 import 'dart:convert';
 
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fullventas_app/config/providers/carrito_provider.dart';
-import 'package:fullventas_app/config/providers/image_data_provider.dart';
+import 'package:fullventas_app/config/providers/descuentos_data_provider.dart';
 import 'package:fullventas_app/config/providers/size_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_data_provider.dart';
-import 'package:fullventas_app/domain/models/fullventas_data/images_data.dart';
-import 'package:fullventas_app/domain/models/fullventas_data/services_data.dart';
+import 'package:fullventas_app/domain/models/fullventas_data/descuentos_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/size_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/user_data.dart';
-import 'package:fullventas_app/ui/pages/carrito_page.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
 import 'package:fullventas_app/ui/widgets_products/video_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:intl/intl.dart';
 
-class DetailProductPage extends ConsumerStatefulWidget {
-  final ServicesData productData;
+class DetailDescuentoPage extends ConsumerStatefulWidget {
+  final DescuentosData descuentosData;
 
-  const DetailProductPage({super.key, required this.productData});
+  const DetailDescuentoPage({super.key, required this.descuentosData});
 
   @override
-  DetailProductPageState createState() => DetailProductPageState();
+  DetailDescuentoPageState createState() => DetailDescuentoPageState();
 }
 
-class DetailProductPageState extends ConsumerState<DetailProductPage> {
+class DetailDescuentoPageState extends ConsumerState<DetailDescuentoPage> {
   String? selectedImage;
   int cantidad = 1;
 
@@ -60,19 +55,16 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
 
   @override
   Widget build(BuildContext context) {
-    final ImageDetailUseCase = ref.watch(imageDataProvider);
     bool isLiked = false;
 
     final UserDetailUseCase = ref.watch(userDataProvider);
+    final DescuentosDetailUseCase = ref.watch(descuentosDataProvider);
     final SizeDetailUseCase = ref.watch(sizeDataProvider);
 
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: Colors.white,
-          ),
+          icon: Icon(Icons.arrow_back_ios),
           onPressed: () {
             Navigator.pop(context); // Regresa a la pantalla anterior
           },
@@ -80,10 +72,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
         title: SizedBox(), // No se muestra texto en el AppBar
         actions: [
           IconButton(
-            icon: Icon(
-              Icons.home,
-              color: Colors.white,
-            ),
+            icon: Icon(Icons.home),
             onPressed: () {
               Navigator.pushReplacement(
                 context,
@@ -93,45 +82,14 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
               );
             },
           ),
-          Stack(
-            children: [
-              IconButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => CarritoPage()),
-                  );
-                },
-                icon: const Icon(Icons.shopping_cart, color: Colors.white),
-              ),
-              Positioned(
-                right: 5,
-                top: 5,
-                child: Consumer(
-                  builder: (context, ref, child) {
-                    final totalCantidad = ref
-                        .watch(carritoProvider)
-                        .fold(0, (sum, item) => sum + item['cantidad'] as int);
-
-                    return totalCantidad > 0
-                        ? CircleAvatar(
-                            backgroundColor: Colors.red,
-                            radius: 8,
-                            child: Text(
-                              totalCantidad
-                                  .toString(), // Ahora muestra la cantidad real
-                              style:
-                                  TextStyle(fontSize: 10, color: Colors.white),
-                            ),
-                          )
-                        : SizedBox(); // No mostrar si el carrito está vacío
-                  },
-                ),
-              ),
-            ],
-          )
+          IconButton(
+            icon: Icon(Icons.shopping_cart),
+            onPressed: () {
+              // Lógica para navegar al carrito, si es necesario
+            },
+          ),
         ],
-        backgroundColor: Color(0xFF3391FA),
+        backgroundColor: Colors.blue,
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -139,11 +97,10 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Nombre del servicio en la parte superior
               Center(
                 child: Text(
-                  utf8.decode(
-                      latin1.encode(widget.productData.title ?? 'Sin título')),
+                  utf8.decode(latin1
+                      .encode(widget.descuentosData.title ?? 'Sin título')),
                   style: TextStyle(
                     fontSize: 18, // Título grande
                     fontWeight: FontWeight.bold,
@@ -157,7 +114,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(10),
                   child: Image.network(
-                    selectedImage ?? widget.productData.imageName ?? '',
+                    widget.descuentosData.image_name ?? '',
                     fit: BoxFit.contain,
                     height: 400, // Hacer la imagen más grande
                     width: double.infinity,
@@ -167,78 +124,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                 ),
               ),
               SizedBox(height: 16),
-              // Imagen adicional (Métodos de pago)
-              FutureBuilder<List<ImageData>>(
-                future: ImageDetailUseCase.getImageById(widget.productData.id!),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  } else if (!snapshot.hasData || snapshot.data == null) {
-                    return Center(child: Text('No se encontró información'));
-                  } else {
-                    final imagesProducts = snapshot.data!;
-
-                    if (selectedImage == null) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        setState(() {
-                          selectedImage = imagesProducts.first.image_name;
-                        });
-                      });
-                    }
-                    return imagesProducts.isEmpty
-                        ? Center(child: CircularProgressIndicator())
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children:
-                                imagesProducts.take(4).map((imageProduct) {
-                              bool isSelected =
-                                  selectedImage == imageProduct.image_name;
-
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    selectedImage = imageProduct.image_name;
-                                  });
-                                },
-                                child: Container(
-                                  width: 80,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: isSelected
-                                          ? Color(0xFF3391FA)
-                                          : Colors.transparent,
-                                      width: 3, // Grosor del borde
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.network(
-                                      imageProduct.image_name!,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                        return Container(
-                                          color: Colors.grey.shade300,
-                                          child: Icon(
-                                            Icons.image_not_supported,
-                                            size: 40,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          );
-                  }
-                },
-              ),
+              //FutureBuilder<List<Descuento>>(future: future, builder: builder)
               SizedBox(
                 height: 200,
                 child: GridView.builder(
@@ -266,16 +152,14 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                   },
                 ),
               ),
-
               SizedBox(height: 18),
-              // Precio y precio anterior en una fila
               Row(
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Precio actual
                   Text(
-                    'S/. ${widget.productData.previousPrice!.toStringAsFixed(2) ?? '0.00'}',
+                    'S/. ${widget.descuentosData.precio_descuento!.toStringAsFixed(2) ?? '0.00'}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -284,9 +168,9 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                   ),
                   SizedBox(width: 10),
                   // Precio anterior si existe
-                  if (widget.productData.price != null)
+                  if (widget.descuentosData.precio_normal != null)
                     Text(
-                      'Antes S/. ${widget.productData.price!.toStringAsFixed(2)}',
+                      'Antes S/. ${widget.descuentosData.precio_normal!.toStringAsFixed(2)}',
                       style: TextStyle(
                         fontSize: 16,
                         color: Colors.grey,
@@ -297,7 +181,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
               ),
               SizedBox(height: 8),
               // Descuento en un container con texto adicional
-              if (widget.productData.descuento != null)
+              if (widget.descuentosData.porcentaje != null)
                 Row(
                   children: [
                     Container(
@@ -308,7 +192,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                         borderRadius: BorderRadius.circular(5),
                       ),
                       child: Text(
-                        '-${(double.tryParse(widget.productData.descuento?.toString() ?? '0') ?? 0).toStringAsFixed(0)}%',
+                        '-${(double.tryParse(widget.descuentosData.porcentaje?.toString() ?? '0') ?? 0).toStringAsFixed(0)}%',
                         style: TextStyle(
                           fontSize: 18,
                           color: Colors.white,
@@ -345,7 +229,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                     ),
                   ),
                   Text(
-                    widget.productData.qty.toString(),
+                    widget.descuentosData.qty.toString(),
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.black,
@@ -358,7 +242,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
               ),
               FutureBuilder<List<SizeData>>(
                 future: SizeDetailUseCase.getSizeById(
-                    widget.productData.idProductSize!),
+                    widget.descuentosData.id_product_size!),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return Center(child: CircularProgressIndicator());
@@ -387,79 +271,67 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                 },
               ),
               SizedBox(
-                height: 8,
-              ),
-              if (widget.productData.fechaFin != null &&
-                  widget.productData.fechaFin!.year > 1)
-                Text(
-                  'Vigencia hasta el ${widget.productData.fechaFin!.day} de ${DateFormat('MMMM', 'es_ES').format(widget.productData.fechaFin!)}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              SizedBox(
                 height: 16,
               ),
-              Align(
-                alignment: Alignment.center,
-                child: Text(
-                  'Cantidad:',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              if (widget.descuentosData.tipo_producto == 1) ...[
+                Align(
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Cantidad:',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
                 ),
-              ),
-              SizedBox(height: 5),
-              Container(
-                alignment: Alignment.center,
-                padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Color(0xFF3391FA), // Color de fondo azul
-                  borderRadius: BorderRadius.circular(10),
+                Container(
+                  alignment: Alignment.center,
+                  padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.blue, // Color de fondo azul
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: IconButton(
+                          onPressed: () {
+                            decrementar();
+                          },
+                          icon: Icon(Icons.remove, color: Colors.white),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 100,
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          '$cantidad', // Puedes cambiarlo dinámicamente
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 100,
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: IconButton(
+                          onPressed: () {
+                            incrementar();
+                          },
+                          icon: Icon(Icons.add, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: IconButton(
-                        onPressed: () {
-                          decrementar();
-                        },
-                        icon: Icon(Icons.remove, color: Colors.white),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 100,
-                    ),
-                    Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Text(
-                        '$cantidad', // Puedes cambiarlo dinámicamente
-                        style: TextStyle(fontSize: 18, color: Colors.white),
-                      ),
-                    ),
-                    SizedBox(
-                      width: 100,
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white),
-                        borderRadius: BorderRadius.circular(5),
-                      ),
-                      child: IconButton(
-                        onPressed: () {
-                          incrementar();
-                        },
-                        icon: Icon(Icons.add, color: Colors.white),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
               SizedBox(
                 height: 16,
               ),
@@ -473,8 +345,8 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
               Align(
                 alignment: Alignment.center,
                 child: Text(
-                  widget.productData.description?.isNotEmpty == true
-                      ? widget.productData.description!
+                  widget.descuentosData.descripcion?.isNotEmpty == true
+                      ? widget.descuentosData.descripcion!
                       : 'Sin descripcion',
                 ),
               ),
@@ -506,9 +378,6 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                   );
                 },
               ),
-              SizedBox(
-                height: 16,
-              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -520,79 +389,27 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                     width: 5,
                   ),
                   Text(
-                    widget.productData.marca?.isNotEmpty == true
-                        ? widget.productData.marca!
+                    widget.descuentosData.marca?.isNotEmpty == true
+                        ? widget.descuentosData.marca!
                         : 'Sin marca',
                     style: TextStyle(fontSize: 15),
                   ),
                 ],
               ),
-
               SizedBox(
                 height: 16,
               ),
               ProductVideoWidget(
-                  videoLinkOne: widget.productData.linkVideoOne,
-                  videoLinkTwo: widget.productData.linkVideoTwo),
+                  videoLinkOne: widget.descuentosData.link_video_one,
+                  videoLinkTwo: widget.descuentosData.link_video_two),
               SizedBox(
                 height: 16,
               ),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {
-                    ref
-                        .read(carritoProvider.notifier)
-                        .addCarrito(widget.productData, cantidad);
-                    AwesomeDialog(
-                      context: context,
-                      dialogType: DialogType.success,
-                      animType: AnimType.scale,
-                      title: "¡Éxito!",
-                      desc: "Producto agregado al carrito",
-                      btnOkText: "Aceptar",
-                      btnOkOnPress: () {},
-                    ).show();
-                  },
+                  onPressed: () {},
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF3391FA),
-                      padding:
-                          EdgeInsets.symmetric(vertical: 12, horizontal: 40),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      )),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.delete_forever, color: Colors.white),
-                      SizedBox(
-                        width: 12,
-                      ),
-                      Text(
-                        'Agregar al carrito',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                        ),
-                      )
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 16,
-              ),
-              Center(
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CarritoPage(),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF3391FA),
+                      backgroundColor: Colors.blueAccent,
                       padding:
                           EdgeInsets.symmetric(vertical: 12, horizontal: 40),
                       shape: RoundedRectangleBorder(
@@ -606,7 +423,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                         width: 12,
                       ),
                       Text(
-                        'Ir al carrito',
+                        'Añadir al carrito',
                         style: TextStyle(
                           fontSize: 16,
                           color: Colors.white,
@@ -614,25 +431,6 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                       )
                     ],
                   ),
-                ),
-              ),
-              SizedBox(
-                height: 16,
-              ),
-              Center(
-                child: Image.asset(
-                  width: 300,
-                  'assets/img/call_wsp.png',
-                ),
-              ),
-              SizedBox(
-                height: 16,
-              ),
-              Center(
-                child: Text(
-                  textAlign: TextAlign.center,
-                  'Cuando hagas tu pedido te contactaremos por WhatsApp',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -670,7 +468,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                   return FloatingActionButton(
                     onPressed: () async {
                       final producto =
-                          widget.productData.title ?? 'este producto';
+                          widget.descuentosData.title ?? 'este producto';
                       final message =
                           'Hola, necesito más información sobre el prodcuto $producto';
                       final url = Uri.parse(
