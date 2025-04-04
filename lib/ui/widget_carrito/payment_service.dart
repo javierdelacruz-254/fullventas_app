@@ -2,96 +2,144 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class PaymentService {
-  final String backendUrl = "http://192.168.1.2/gull_ventas_php_project-master/procces_payment.php"; // Reemplaza con la URL de tu archivo PHP
-  final String insertOrderUrl = "http://192.168.1.2/gull_ventas_php_project-master/insert_order.php"; // URL del archivo PHP para insertar la orden
+  // URLs base como constantes
+  static const String _baseUrl =
+      "http://192.168.18.3/mystore/gull_ventas_php_project";
+  final String _paymentEndpoint = "$_baseUrl/procces_payment.php";
+  final String _orderEndpoint = "$_baseUrl/insert_order.php";
+
+  // Tiempo de espera para las peticiones HTTP
+  final Duration _timeout = const Duration(seconds: 30);
 
   Future<Map<String, dynamic>> processPayment({
+    required int amount,
+    required String currency,
+    required String email,
+    required String sourceId,
+    required String firstName,
+    required String lastName,
+    required String orderUserId,
+    required int orderClientId,
+    required String orderNoti,
+    required Map<String, dynamic> orderSucursal,
+    required String orderDistrito,
+    required int orderCostoEnvio,
+    required int orderComisionCulqi,
+    required List<Map<String, dynamic>> orderedProducts,
+    required String orderMethod,
+    required int orderStatus,
+  }) async {
+    try {
+      // 1. Procesar el pago
+      final paymentResult = await _processPaymentTransaction(
+        amount: amount.toDouble(),
+        currency: currency,
+        email: email,
+        sourceId: sourceId,
+        firstName: firstName,
+        lastName: lastName,
+        orderUserId: orderUserId,
+      );
+
+      if (paymentResult['status'] != 'success') {
+        return paymentResult;
+      }
+
+      // 2. Crear la orden si el pago fue exitoso
+      final orderResult = await _createOrder(
+        orderUserId: orderUserId,
+        orderClientId: orderClientId,
+        orderNoti: orderNoti,
+        orderSucursalId: orderSucursal['id'],
+        orderDistrito: orderDistrito,
+        total: amount.toDouble(),
+        orderCostoEnvio: orderCostoEnvio,
+        orderComisionCulqi: orderComisionCulqi,
+        orderedProducts: orderedProducts,
+        orderMethod: orderMethod,
+        orderStatus: orderStatus,
+      );
+
+      return orderResult;
+    } catch (e) {
+      return {
+        "status": "error",
+        "message": "Error en el proceso de pago order: ${e.toString()}",
+        "error_details": e.toString(),
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> _processPaymentTransaction({
     required double amount,
     required String currency,
     required String email,
     required String sourceId,
     required String firstName,
     required String lastName,
-    required String orderUserId, // ID del usuario
-    required int orderClientId, // ID del cliente
-    required String orderNoti, // Notificación
-    required Map<String, dynamic> orderSucursal, // ID de la sucursal
-    required String orderDistrito, // Distrito
-    required int orderCostoEnvio,
-    required int orderComisionCulqi,
-    required List<Map<String, dynamic>> orderedProducts,
-    required String orderMethod,
-    required int orderStatus,
+    required String orderUserId,
   }) async {
     final body = {
       "amount": amount,
       "currency_code": currency,
       "email": email,
       "source_id": sourceId,
-      "antifraud_details":{
+      "antifraud_details": {
         "first_name": firstName,
         "last_name": lastName,
       }
     };
 
-    try {
-      final response = await http.post(
-        Uri.parse("$backendUrl?negocio_id=$orderUserId"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(body),
-      );
+    final response = await http
+        .post(
+          Uri.parse("$_paymentEndpoint?negocio_id=$orderUserId"),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode(body),
+        )
+        .timeout(_timeout);
 
-      if (response.statusCode == 200) {
-        final paymentResponse = jsonDecode(response.body);
-
-        if (paymentResponse.containsKey('authorization_code')) {
-          // Después de un pago exitoso, enviamos los detalles de la orden
-          final orderResponse = await _sendOrderData(
-            orderUserId: orderUserId,
-            orderClientId: orderClientId,
-            orderNoti: orderNoti,
-            orderSucursalId: orderSucursal['id'],
-            orderDistrito: orderDistrito,
-            amount: amount,
-            orderCostoEnvio: orderCostoEnvio,
-            orderComisionCulqi: orderComisionCulqi,
-            orderedProducts: orderedProducts,
-            orderMethod: orderMethod,
-            orderStatus: orderStatus,
-          );
-          return orderResponse;
-        } else {
-          return {"status": "error", "message": "Error al procesar el pago"};
-        }
-      } else {
-        return {"status": "error", "message": "Error en la respuesta del servidor"};
-      }
-    } catch (e) {
-      return {"status": "error", "message": e.toString()};
+    if (response.statusCode != 200) {
+      return {
+        "status": "error",
+        "message":
+            "Error en la respuesta del servidor (${response.statusCode})",
+        "response_body": response.body,
+      };
     }
+
+    final paymentResponse = jsonDecode(response.body);
+
+    if (!paymentResponse.containsKey('authorization_code')) {
+      return {
+        "status": "error",
+        "message": "Fallo en la autorización del pago",
+        "payment_response": paymentResponse,
+      };
+    }
+
+    return {"status": "success", "payment_data": paymentResponse};
   }
-  // Función para enviar los detalles de la orden a la base de datos
-  Future<Map<String, dynamic>> _sendOrderData({
+
+  Future<Map<String, dynamic>> _createOrder({
     required String orderUserId,
     required int orderClientId,
     required String orderNoti,
     required String orderSucursalId,
     required String orderDistrito,
-    required double amount,
+    required double total,
     required int orderCostoEnvio,
     required int orderComisionCulqi,
     required List<Map<String, dynamic>> orderedProducts,
     required String orderMethod,
     required int orderStatus,
   }) async {
-
     final body = {
       "order_user_id": orderUserId,
       "order_client_id": orderClientId,
       "order_noti": orderNoti,
       "order_sucursal_id": orderSucursalId,
       "order_distrito": orderDistrito,
-      "amount": amount/100,
+      "total": total, // Convertir a unidades monetarias estándar
       "order_costo_envio": orderCostoEnvio,
       "order_comision_culqui": orderComisionCulqi,
       "ordered_products": orderedProducts,
@@ -99,25 +147,34 @@ class PaymentService {
       "order_status": orderStatus,
     };
 
-    print("Enviando datos de la orden: $body");
-
     try {
-      final response = await http.post(
-        Uri.parse(insertOrderUrl),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(body),
-      );
+      final response = await http
+          .post(
+            Uri.parse(_orderEndpoint),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode(body),
+          )
+          .timeout(_timeout);
 
-      print("Respuesta de insert_order.php: ${response.body}");
+      if (response.statusCode != 200) {
+        throw Exception("HTTP ${response.statusCode}: ${response.body}");
+      }
 
-      if (response.statusCode == 200) {
-        final orderResponse = jsonDecode(response.body);
+      final orderResponse = jsonDecode(response.body);
+
+      // Validar que la respuesta contiene los datos esperados
+      if (orderResponse['status'] == 'success' &&
+          orderResponse.containsKey('ticket_number')) {
         return orderResponse;
       } else {
-        return {"status": "error", "message": "Error al insertar la orden"};
+        throw Exception("Respuesta de orden inválida: ${response.body}");
       }
     } catch (e) {
-      return {"status": "error", "message": e.toString()};
+      return {
+        "status": "error",
+        "message": "Error al crear la orden: ${e.toString()}",
+        "error_details": e.toString(),
+      };
     }
   }
 }

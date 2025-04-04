@@ -12,6 +12,7 @@ import 'package:fullventas_app/ui/widgets/carrusel_producto.dart';
 import 'package:fullventas_app/ui/widgets/categories.dart';
 import 'package:fullventas_app/ui/widgets/logo.dart';
 import 'package:fullventas_app/ui/widgets/videos_detacados.dart';
+import 'package:fullventas_app/ui/pages/galeria_comuni.dart';
 
 class HomePage extends ConsumerWidget {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -220,6 +221,25 @@ class HomePage extends ConsumerWidget {
                             fontSize: 18, fontWeight: FontWeight.w500),
                       ),
                       onTap: () {},
+                    ),
+                    ListTile(
+                      leading: Icon(
+                        Icons.photo_library,
+                        color: Color(0xFF3391FA),
+                      ),
+                      title: Text(
+                        'Comunidad Fotos',
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w500),
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => GaleriaPage(),
+                          ),
+                        );
+                      },
                     ),
                   ],
                 ],

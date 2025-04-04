@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/carrito_provider.dart';
 import 'package:fullventas_app/config/providers/estrategia_ventas_image_data_provider.dart';
 import 'package:fullventas_app/config/providers/size_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_data_provider.dart';
@@ -26,6 +28,21 @@ class DetailEstrategiaVentaPage extends ConsumerStatefulWidget {
 class DetailEstrategiaVentaPageState
     extends ConsumerState<DetailEstrategiaVentaPage> {
   String? selectedImage;
+  int cantidad = 1;
+
+  void incrementar() {
+    setState(() {
+      cantidad++;
+    });
+  }
+
+  void decrementar() {
+    if (cantidad > 1) {
+      setState(() {
+        cantidad--;
+      });
+    }
+  }
 
   Widget _builMetodosPago(String image) {
     return Column(
@@ -316,6 +333,68 @@ class DetailEstrategiaVentaPageState
                 },
               ),
               SizedBox(
+                height: 10,
+              ),
+              if (widget.estrategiaVentasData.tipo_producto == 1) ...[
+                Align(
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Cantidad:',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                Container(
+                  alignment: Alignment.center,
+                  padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.blue, // Color de fondo azul
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: IconButton(
+                          onPressed: () {
+                            decrementar();
+                          },
+                          icon: Icon(Icons.remove, color: Colors.white),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 100,
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          '$cantidad',
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 100,
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.white),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: IconButton(
+                          onPressed: () {
+                            incrementar();
+                          },
+                          icon: Icon(Icons.add, color: Colors.white),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              SizedBox(
                 height: 16,
               ),
               Align(
@@ -407,7 +486,22 @@ class DetailEstrategiaVentaPageState
               ),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    ref.read(carritoProvider.notifier).addCarrito(
+                        widget.estrategiaVentasData,
+                        widget.estrategiaVentasData.tipo_producto == 1
+                            ? cantidad
+                            : 1);
+                    AwesomeDialog(
+                      context: context,
+                      dialogType: DialogType.success,
+                      animType: AnimType.scale,
+                      title: 'Plan añadido',
+                      desc:
+                          'La oferta ha sido agregado al carrito correctamente.',
+                      btnOkOnPress: () {},
+                    ).show();
+                  },
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                       padding:

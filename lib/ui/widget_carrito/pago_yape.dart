@@ -1,14 +1,15 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:fullventas_app/ui/widget_carrito/ticket_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:fullventas_app/ui/widget_carrito/ticket_screen.dart';
+import 'dart:io';
+import 'dart:async';
 
 class PagoYapePage extends StatelessWidget {
-  final TextEditingController _otpController = TextEditingController();
+  final TextEditingController _codigoYapeController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  double _totalAmount = 0.0;
 
   final ValueNotifier<bool> _isLoading = ValueNotifier(false);
   final ValueNotifier<String> _message = ValueNotifier("");
@@ -20,6 +21,7 @@ class PagoYapePage extends StatelessWidget {
   final int metodoPago;
   final int estadoPago;
   final Map<String, dynamic> sucursal;
+
   PagoYapePage({
     required this.userData,
     required this.distrito,
@@ -29,6 +31,229 @@ class PagoYapePage extends StatelessWidget {
     required this.estadoPago,
     required this.sucursal,
   });
+
+  Future<void> _generarTokenYape(BuildContext context) async {
+    final String otp = _codigoYapeController.text.trim();
+    final String phone = _phoneController.text.trim();
+    final String email = _emailController.text.trim();
+
+    print('🔵 [DEBUG] Iniciando generación de token Yape');
+    print('🟠 [DEBUG] Datos ingresados:');
+    print('          OTP: $otp');
+    print('          Teléfono: $phone');
+    print('          Email: $email');
+    print('          Monto: ${total.toStringAsFixed(2)} PEN');
+
+    // ... validaciones previas ...
+
+    try {
+      final Map<String, dynamic> requestBody = {
+        "otp": otp,
+        "number_phone": phone,
+        "amount": (total * 100).toInt(),
+        "id_negocio": 2,
+        "email": email,
+      };
+
+      print('🟢 [DEBUG] Enviando a servidor (token_yape.php):');
+      print(jsonEncode(requestBody));
+
+      final response = await http
+          .post(
+            Uri.parse(
+                'http://192.168.18.3/mystore/gull_ventas_php_project/token_yape.php'),
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+            },
+            body: jsonEncode(requestBody),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      print('🔵 [DEBUG] Respuesta del servidor:');
+      print('          Código HTTP: ${response.statusCode}');
+      print('          Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        print('🟢 [DEBUG] Respuesta decodificada:');
+        print(responseData);
+
+        if (responseData['success'] == true && responseData['id'] != null) {
+          print('✅ [DEBUG] Token generado exitosamente: ${responseData['id']}');
+          await _generarCargoYape(responseData['id'], context);
+        } else {
+          print('❌ [DEBUG] Error en respuesta del servidor');
+          _message.value =
+              "❌ ${responseData['error'] ?? 'Error al generar token'}";
+        }
+      } else {
+        print('❌ [DEBUG] Error HTTP: ${response.statusCode}');
+        _message.value = "❌ Error en la conexión (${response.statusCode})";
+      }
+    } on FormatException catch (e) {
+      print('❌ [DEBUG] FormatException: $e');
+      _message.value = "Error en el formato de los datos recibidos";
+    } on SocketException catch (e) {
+      print('❌ [DEBUG] SocketException: $e');
+      _message.value = "Error de conexión. Verifique su internet";
+    } on TimeoutException catch (e) {
+      print('❌ [DEBUG] TimeoutException: $e');
+      _message.value = "La operación tardó demasiado. Intente nuevamente";
+    } on http.ClientException catch (e) {
+      print('❌ [DEBUG] ClientException: ${e.message}');
+      _message.value = "Error en la solicitud: ${e.message}";
+    } catch (e) {
+      print('❌ [DEBUG] Excepción no manejada: $e');
+      _message.value = "Error inesperado: ${e.toString()}";
+    } finally {
+      _isLoading.value = false;
+    }
+  }
+
+  Future<void> _verificarEstadoPagoPeriodicamente(
+      String sourceId, BuildContext context) async {
+    const maxIntentos = 5;
+    const intervalo = Duration(seconds: 5);
+    bool pagoConfirmado = false;
+
+    for (int intento = 0; intento < maxIntentos; intento++) {
+      await Future.delayed(intervalo);
+
+      try {
+        final response = await http.post(
+          Uri.parse(
+              'http://192.168.18.3/mystore/gull_ventas_php_project/verificar_pago.php'),
+          headers: {"Content-Type": "application/json"},
+          body: jsonEncode({"source_id": sourceId}),
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = jsonDecode(response.body);
+          if (responseData['estado'] == 'pagado') {
+            pagoConfirmado = true;
+            _message.value = "✅ Pago confirmado";
+            await _insertarOrdenYape(context);
+            break;
+          }
+        }
+      } catch (e) {
+        print('Error al verificar pago: $e');
+      }
+    }
+
+    if (!pagoConfirmado) {
+      _message.value = "⚠ No se pudo confirmar el pago. Verifique su app Yape";
+    }
+  }
+
+  Future<void> _generarCargoYape(String sourceId, BuildContext context) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://tu-servidor/cargo_yape.php'),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "source_id": sourceId,
+          "email": _emailController.text.trim(),
+          "amount": (total * 100).toInt(),
+          "id_negocio": 2,
+        }),
+      );
+
+      final responseData = jsonDecode(response.body);
+
+      if (response.statusCode == 201) {
+        // Pago pendiente de confirmación
+        _message.value = "⚠ Abra su app Yape para confirmar el pago";
+        await _verificarEstadoPagoPeriodicamente(
+            responseData['culqi_id'], context);
+      } else if (response.statusCode == 200) {
+        _message.value = "✅ Pago exitoso";
+        await _insertarOrdenYape(context);
+      } else {
+        _message.value = "❌ Error: ${responseData['error']}";
+      }
+    } catch (e) {
+      _message.value = "⚠ Error: ${e.toString()}";
+    }
+  }
+
+  Future<void> _insertarOrdenYape(BuildContext context) async {
+    print('🔵 [DEBUG] Insertando orden en sistema...');
+
+    final String metodo = _obtenerNombreMetodoPago(metodoPago);
+    final String fechaHora =
+        DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+    final String statusText = _obtenerTextoEstado(estadoPago);
+
+    final Map<String, dynamic> data = {
+      "amount": total,
+      "order_method": metodo,
+      "order_user_id": userData['user_id'],
+      "order_client_id": 4,
+      "order_costo_envio": 10,
+      "order_comision_culqui": 2,
+      "order_noti": "1",
+      "order_sucursal_id": sucursal['id'],
+      "order_distrito": distrito,
+      "ordered_products": productos,
+      "order_status": estadoPago,
+    };
+
+    print('🟢 [DEBUG] Datos para insertar orden:');
+    print(jsonEncode(data));
+
+    try {
+      final response = await http
+          .post(
+            Uri.parse(
+                'http://192.168.18.3/mystore/gull_ventas_php_project/insert_order.php'),
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode(data),
+          )
+          .timeout(const Duration(seconds: 30));
+
+      print('🔵 [DEBUG] Respuesta del servidor (insert_order.php):');
+      print('          Código HTTP: ${response.statusCode}');
+      print('          Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final responseData = jsonDecode(response.body);
+        if (responseData['success'] == true) {
+          print('✅ [DEBUG] Orden insertada exitosamente');
+          print('          Número de ticket: ${responseData['ticket_number']}');
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TicketScreen(
+                distrito: distrito,
+                total: total,
+                userData: userData,
+                fechaHora: fechaHora,
+                productos: productos,
+                orderCostoEnvio: 10,
+                orderStatus: statusText,
+                orderID: responseData['ticket_number'],
+                orderMethod: metodo,
+                sucursalTicket: sucursal,
+              ),
+            ),
+          );
+        } else {
+          print('❌ [DEBUG] Error al insertar orden');
+          _message.value =
+              "⚠ Error al generar ticket: ${responseData['message']}";
+        }
+      } else {
+        print('❌ [DEBUG] Error HTTP al insertar orden');
+        _message.value = "⚠ Error al registrar orden (${response.statusCode})";
+      }
+    } catch (e) {
+      print('❌ [DEBUG] Error al conectar con servidor: $e');
+      _message.value = "⚠ Error al conectar con el servidor";
+    }
+  }
 
   String _obtenerNombreMetodoPago(int metodo) {
     switch (metodo) {
@@ -54,209 +279,119 @@ class PagoYapePage extends StatelessWidget {
     }
   }
 
-  Future<void> generarTokenYape(BuildContext context) async {
-    final String otp = _otpController.text.trim();
-    final String phone = _phoneController.text.trim();
-
-    if (otp.length != 6 || phone.length != 9) {
-      _message.value = "Por favor, ingrese datos válidos.";
-      return;
-    }
-
-    _isLoading.value = true;
-    _message.value = "";
-
-    try {
-      final url = Uri.parse(
-          'http://192.168.1.5/gull_ventas_php_project-master/token_yape.php');
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "otp": otp,
-          "number_phone": phone,
-          "amount": total,
-          "id_negocio": int.parse(userData['user_id']),
-        }),
-      );
-
-      print("Respuesta completa del servidor: ${response.body}");
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final data = jsonDecode(response.body);
-        if (data.containsKey("id")) {
-          await generarCargoYape(
-            data["id"],
-            productos,
-            context,
-          );
-        } else {
-          _message.value = "Error al generar el token Yape.";
-        }
-      } else {
-        _message.value = "Error en el pago: ${response.body}";
-      }
-    } catch (e) {
-      print("Error de conexión token.:$e");
-      _message.value = "Error de conexión token.:$e";
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  Future<void> generarCargoYape(
-    String tokenYape,
-    List<Map<String, dynamic>> productos,
-    BuildContext context,
-  ) async {
-    final String email = _emailController.text.trim();
-    if (email.isEmpty) {
-      _message.value = "Por favor, ingrese su correo.";
-      return;
-    }
-
-    final url = Uri.parse(
-        'http://192.168.1.5/gull_ventas_php_project-master/cargo_yape.php');
-    try {
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "token_yape": tokenYape,
-          "email": email,
-          "amount": total,
-          "id_negocio": int.parse(userData['user_id']),
-        }),
-      );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        _message.value = "Pago exitoso.";
-        await insertarOrdenYape(
-          productos,
-          context,
-        );
-      } else {
-        _message.value = "Error en el pago: ${response.body}";
-      }
-    } catch (e) {
-      _message.value = "Error de conexión cargo.";
-    }
-  }
-
-  Future<void> insertarOrdenYape(
-    List<Map<String, dynamic>> productos,
-    BuildContext context,
-  ) async {
-    String metodo = _obtenerNombreMetodoPago(metodoPago);
-    String fechaHora = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
-    String statusText = _obtenerTextoEstado(estadoPago);
-
-    final url = Uri.parse(
-        'http://192.168.1.5/gull_ventas_php_project-master/insert_order.php');
-    final Map<String, dynamic> data = {
-      "amount": total / 100,
-      "order_method": metodo,
-      "order_user_id": userData['user_id'],
-      "order_client_id": 4,
-      "order_costo_envio": 10,
-      "order_comision_culqui": 2,
-      "order_noti": "1",
-      "order_sucursal_id": sucursal['id'],
-      "order_distrito": distrito,
-      "ordered_products": productos,
-      "order_status": estadoPago,
-    };
-
-    try {
-      final response = await http.post(
-        url,
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode(data),
-      );
-      print("Respuesta de insert_order.php: ${response.body}");
-      if (response.statusCode == 200) {
-        _message.value = "✅ Pago y orden registrados correctamente.";
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        final int orderId = responseData['ticket_number'];
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TicketScreen(
-              distrito: distrito,
-              total: total / 100,
-              userData: userData,
-              fechaHora: fechaHora,
-              productos: productos,
-              orderCostoEnvio: 10,
-              orderStatus: statusText,
-              orderID: orderId,
-              orderMethod: metodo,
-              sucursalTicket: sucursal,
-            ),
-          ),
-        );
-      } else {
-        _message.value = "⚠ Error al registrar la orden.";
-      }
-    } catch (e) {
-      _message.value = "🚫 Error de conexión al registrar la orden.";
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: Text("Pago con Yape"),
-          backgroundColor: Colors.deepPurple,
-        ),
-        body: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child:
-                Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              _buildTextField(_phoneController, "Número de celular",
-                  keyboardType: TextInputType.phone, maxLength: 9),
-              _buildTextField(_otpController, "OTP de Yape",
-                  keyboardType: TextInputType.number, maxLength: 6),
-              _buildTextField(_emailController, "Correo electrónico"),
-              SizedBox(height: 20),
-              ValueListenableBuilder<bool>(
-                valueListenable: _isLoading,
-                builder: (context, isLoading, child) {
-                  return ElevatedButton(
+      appBar: AppBar(
+        title: const Text("Pago con Yape"),
+        backgroundColor: Colors.deepPurple,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            const Text(
+              "Complete los datos para pagar con Yape",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 30),
+            _buildInputField(
+              controller: _phoneController,
+              label: "Número de celular",
+              hint: "9XXXXXXXX",
+              keyboardType: TextInputType.phone,
+              maxLength: 9,
+              prefixText: "+51 ",
+            ),
+            const SizedBox(height: 20),
+            _buildInputField(
+              controller: _codigoYapeController,
+              label: "Código Yape",
+              hint: "6 dígitos de tu app Yape",
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+            ),
+            const SizedBox(height: 20),
+            _buildInputField(
+              controller: _emailController,
+              label: "Correo electrónico",
+              hint: "ejemplo@correo.com",
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 30),
+            ValueListenableBuilder<bool>(
+              valueListenable: _isLoading,
+              builder: (context, isLoading, _) {
+                return ElevatedButton(
                     onPressed:
-                        isLoading ? null : () => generarTokenYape(context),
-                    child: Text("Pagar con Yape"),
+                        isLoading ? null : () => _generarTokenYape(context),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color.fromARGB(255, 164, 132, 219),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                      textStyle: TextStyle(fontSize: 16),
+                      backgroundColor: Colors.deepPurple,
+                      minimumSize: const Size(double.infinity, 50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
-                  );
-                },
-              ),
-              SizedBox(height: 20),
-              ValueListenableBuilder<String>(
-                valueListenable: _message,
-                builder: (context, message, child) {
-                  return Text(message, style: TextStyle(color: Colors.red));
-                },
-              ),
-            ])));
+                    child: Builder(
+                      builder: (context) => isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              "Pagar S/ ${total.toStringAsFixed(2)}",
+                              style: const TextStyle(fontSize: 18),
+                            ),
+                    ));
+              },
+            ),
+            const SizedBox(height: 20),
+            ValueListenableBuilder<String>(
+              valueListenable: _message,
+              builder: (context, message, _) {
+                return message.isNotEmpty
+                    ? Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: message.startsWith("✅")
+                              ? Colors.green[100]
+                              : Colors.red[100],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          message,
+                          style: TextStyle(
+                            color: message.startsWith("✅")
+                                ? Colors.green[800]
+                                : Colors.red[800],
+                          ),
+                        ),
+                      )
+                    : const SizedBox();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label,
-      {TextInputType keyboardType = TextInputType.text, int? maxLength}) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        maxLength: maxLength,
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(),
-        ),
+  Widget _buildInputField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required TextInputType keyboardType,
+    int? maxLength,
+    String? prefixText,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLength: maxLength,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        border: const OutlineInputBorder(),
+        prefixText: prefixText,
+        counterText: "",
       ),
     );
   }

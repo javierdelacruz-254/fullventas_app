@@ -2,14 +2,16 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/user_provider.dart';
+import 'package:fullventas_app/domain/models/fullventas_data/user_data.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
-import 'package:fullventas_app/ui/widget_carrito/libro_reclamaciones.dart';
 import 'package:fullventas_app/ui/widget_carrito/pago_yape.dart';
-import 'package:fullventas_app/ui/widget_carrito/ticket_screen.dart';
 import 'package:fullventas_app/ui/widget_carrito/pago.dart';
+import 'package:fullventas_app/ui/pages/libro_reclamaciones.dart';
+import 'package:fullventas_app/domain/models/fullventas_data/cliente_data.dart';
 
 class MetodoPago extends ConsumerStatefulWidget {
-  const MetodoPago({super.key});
+  final double total;
+  const MetodoPago({super.key, required this.total});
 
   @override
   MetodoPagoState createState() => MetodoPagoState();
@@ -48,36 +50,51 @@ class MetodoPagoState extends ConsumerState<MetodoPago> {
       return;
     }
 
-    if (selectedPayment == "Pago en el mismo Gimnasio") {
+    if (selectedPayment == "Pago con yape") {
+      // Redirigir a la pantalla de pago con Yape
       Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (context) => TicketScreen(
-                distrito: "",
-                total: 0.00,
-                userData: {},
-                fechaHora: "",
-                productos: [],
-                orderCostoEnvio: 0.0,
-                orderStatus: "",
-                orderID: 0,
-                orderMethod: "",
-                sucursalTicket: {})), // Reemplázalo con la pantalla adecuada
+          builder: (context) => PagoYapePage(
+            userData: {"id": 2}, // Datos del usuario
+            distrito: "Lima",
+            productos: [], // Lista de productos
+            total: widget.total,
+            metodoPago: 2, // Código para Yape
+            estadoPago: 0,
+            sucursal: {"id": 1}, // Solo el ID de la sucursal
+          ),
+        ),
       );
-    } else if (selectedPayment == "Pago con tarjeta débito, crédito, etc") {
+    }
+
+    if (selectedPayment == "Pago con tarjeta débito, crédito, etc") {
+      // Redirigir a la pantalla de pago con tarjeta
       Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (context) =>
-                PaymentScreen()), // Reemplázalo con la pantalla de tarjeta
+          builder: (context) => PaymentScreen(
+            userData: {"id": 2}, // Datos del usuario
+            distrito: "Lima",
+            productos: [], // Lista de productos
+            amount: widget.total,
+            metodoPago: 1,
+            estadoPago: 0,
+            sucursal: {"id": 1}, // Solo se pasa el ID
+          ),
+        ),
       );
-    } else if (selectedPayment == "Pago con yape") {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-            builder: (context) =>
-                PagoYapePage()), // Reemplázalo con la pantalla de Yape
-      );
+    } else {
+      // Aquí puedes manejar otros métodos de pago
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.success,
+        animType: AnimType.bottomSlide,
+        title: "Pago procesado",
+        desc: "Tu pedido ha sido registrado correctamente.",
+        btnOkText: "Aceptar",
+        btnOkOnPress: () {},
+      ).show();
     }
   }
 

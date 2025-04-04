@@ -1,7 +1,9 @@
 import 'dart:convert';
 
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/carrito_provider.dart';
 import 'package:fullventas_app/config/providers/planes_image_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/planes_data.dart';
@@ -388,7 +390,35 @@ class DetailPlanPageState extends ConsumerState<DetailPlanPage> {
               ),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    final carrito = ref.read(carritoProvider);
+                    final existe = carrito.any(
+                        (item) => item['producto'].id == widget.planesData.id);
+                    if (existe) {
+                      AwesomeDialog(
+                        context: context,
+                        dialogType: DialogType.warning,
+                        animType: AnimType.scale,
+                        title: "Atención",
+                        desc: "El servicio ya esta en el carrito",
+                        btnOkText: "Aceptar",
+                        btnOkOnPress: () {},
+                      ).show();
+                    } else {
+                      ref
+                          .read(carritoProvider.notifier)
+                          .addCarrito(widget.planesData, 1);
+                      AwesomeDialog(
+                        context: context,
+                        dialogType: DialogType.success,
+                        animType: AnimType.scale,
+                        title: 'Plan añadido',
+                        desc:
+                            'El plan ha sido agregado al carrito correctamente.',
+                        btnOkOnPress: () {},
+                      ).show();
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                       padding:

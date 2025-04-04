@@ -6,7 +6,7 @@ class CulqiService {
 
   Future<void> fetchPublicKey(int usersId) async {
     final url = Uri.parse(
-        'http://192.168.18.3/mystore/gull_ventas_php_project-master/get_culqi_keys.php?negocio_id=$usersId');
+        'http://192.168.18.3/mystore/gull_ventas_php_project/get_culqi_keys.php?negocio_id=$usersId');
 
     try {
       final response = await http.get(url);

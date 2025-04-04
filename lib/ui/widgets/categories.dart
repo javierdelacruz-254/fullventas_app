@@ -1,3 +1,4 @@
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/categories_data_provider.dart';
@@ -5,6 +6,7 @@ import 'package:fullventas_app/domain/models/fullventas_data/categories_data.dar
 import 'package:fullventas_app/ui/pages/calificacion_page.dart';
 import 'package:fullventas_app/ui/pages/estrategia_ventas_page.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
+import 'package:fullventas_app/ui/pages/libro_reclamaciones.dart';
 import 'package:fullventas_app/ui/pages/maquinas_page.dart';
 import 'package:fullventas_app/ui/pages/pases_libre_page.dart';
 import 'package:fullventas_app/ui/pages/planes_page.dart';
@@ -14,6 +16,7 @@ import 'package:fullventas_app/ui/pages/service_page.dart';
 import 'package:fullventas_app/ui/pages/sucursales_page.dart';
 import 'package:fullventas_app/ui/pages/sugerencias_form.dart';
 import 'package:fullventas_app/ui/pages/videos_page.dart';
+import 'package:fullventas_app/ui/widgets_ejercicios/listado_ejercicios.dart';
 
 class CategoriesGrid extends ConsumerWidget {
   const CategoriesGrid({super.key});
@@ -48,54 +51,75 @@ class CategoriesGrid extends ConsumerWidget {
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
                     final category = categories[index];
+                    final bool isActive = category.status == 1;
 
                     return GestureDetector(
                       onTap: () {
-                        navigateToCategoryScreen(context, category.title!);
+                        if (isActive) {
+                          navigateToCategoryScreen(context, category.title!);
+                        } else {
+                          AwesomeDialog(
+                            context: context,
+                            dialogType: DialogType.warning,
+                            animType: AnimType.bottomSlide,
+                            title: 'Módulo inactivo',
+                            desc:
+                                'Por el momento, esta módulo se encuentra inactivo.',
+                            btnOkOnPress: () {},
+                            btnOkColor: Colors.orange,
+                          ).show();
+                        }
                       },
-                      child: Column(
-                        mainAxisSize: MainAxisSize.max,
-                        children: [
-                          Expanded(
-                              child: Card(
-                            color: Color(0xFF3391FA),
-                            elevation: 4.0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10.0),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(10.0),
-                              child: Image.network(
-                                category.image_name!,
-                                fit: BoxFit.cover,
-                                color: Colors.white,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    width: double.infinity,
-                                    height: 120,
-                                    color: Colors.grey.shade300,
-                                    child: Icon(
-                                      Icons.image_not_supported,
-                                      size: 50,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                  );
-                                },
+                      child: Opacity(
+                        opacity: isActive ? 1.0 : 0.5,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.max,
+                          children: [
+                            Expanded(
+                                child: Card(
+                              color: Color(0xFF3391FA),
+                              elevation: 4.0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10.0),
                               ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(10.0),
+                                child: Image.network(
+                                  category.image_name!,
+                                  fit: BoxFit.cover,
+                                  color: isActive ? Colors.white : Colors.grey,
+                                  colorBlendMode:
+                                      isActive ? null : BlendMode.saturation,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      width: double.infinity,
+                                      height: 120,
+                                      color: Colors.grey.shade300,
+                                      child: Icon(
+                                        Icons.image_not_supported,
+                                        size: 50,
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            )),
+                            SizedBox(height: 5.0),
+                            Text(
+                              category.title!, // Mostrar el título
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 10.0,
+                                  fontWeight: FontWeight.bold,
+                                  color: isActive
+                                      ? Colors.black
+                                      : Colors.grey.shade900),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                          )),
-                          SizedBox(height: 5.0),
-                          Text(
-                            category.title!, // Mostrar el título
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                                fontSize: 10.0,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -141,6 +165,9 @@ class CategoriesGrid extends ConsumerWidget {
         break;
       case 'MAQUINAS':
         screen = MaquinasPage();
+        break;
+      case 'GUIA DE ENTRENAMIENTO':
+        screen = EjerciciosPage();
         break;
       default:
         screen = HomePage();
