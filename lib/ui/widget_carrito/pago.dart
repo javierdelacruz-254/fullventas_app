@@ -72,7 +72,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     print('- Productos: ${widget.productos}');
     print('- Total: ${widget.amount}');
     print('- Método Pago: ${widget.metodoPago}');
-    print('- Estado Pago: ${widget.estadoPago}');
+    print('- Estado Pago: ${1}');
     print('- Sucursal: ${widget.sucursal}');
     _initializeData();
   }
@@ -193,7 +193,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       print('- Distrito: ${widget.distrito}');
       print(
           '- Método Pago: ${widget.metodoPago == 1 ? 'Tarjeta' : 'Efectivo'}');
-      print('- Estado Pago: ${widget.estadoPago}');
+      print('- Estado Pago: ${1}');
 
       final paymentResult = await PaymentService().processPayment(
         amount: amountInCents, // Enviar en centavos
@@ -211,7 +211,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         orderComisionCulqi: comisionCulqi,
         orderedProducts: orderedProducts,
         orderMethod: widget.metodoPago == 1 ? 'Tarjeta' : 'Efectivo',
-        orderStatus: widget.estadoPago,
+        orderStatus: 1,
       );
 
       if (paymentResult['status'] == 'success') {

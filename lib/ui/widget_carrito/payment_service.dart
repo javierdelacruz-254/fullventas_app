@@ -133,18 +133,32 @@ class PaymentService {
     required String orderMethod,
     required int orderStatus,
   }) async {
+    // Adapting to the table structure from the image
     final body = {
+      "color_id": "", // Auto-incremented in database
+      "color_method": orderMethod,
+      "color_amount": total.toString(),
+      "color_costs_envio": orderCostoEnvio.toString(),
+      "color_combine_colapid": "", // Not clear from table, leave empty
       "order_user_id": orderUserId,
-      "order_client_id": orderClientId,
-      "order_noti": orderNoti,
-      "order_sucursal_id": orderSucursalId,
-      "order_distrito": orderDistrito,
-      "total": total, // Convertir a unidades monetarias estándar
-      "order_costo_envio": orderCostoEnvio,
-      "order_comision_culqui": orderComisionCulqi,
+      "order_sitter_id": orderClientId.toString(),
+      "order_status": orderStatus.toString(),
+      "date_status": DateTime.now().toString(),
+      "status_despancho": "1", // Default value from table
+      "order_poll": "NULL", // From table
+      "view_poll": "1", // Default value from table
+      "order_secreted_id": "", // Not clear from table
+      "order_distribo": orderDistrito,
+      // Additional fields from the table that might be needed
+      "options_no": "", // From table header
+      "name_no": "", // From table header
+      "name_de_flux": "", // From table header
+      "fax": "", // From table header
+      "phone_flux": "", // From table header
+      "docker_en_esta_tabla": "", // From table header
+      "options_segun_la_clave": "", // From table header
+      "empresa": "", // From table header
       "ordered_products": orderedProducts,
-      "order_method": orderMethod,
-      "order_status": orderStatus,
     };
 
     try {
@@ -163,9 +177,16 @@ class PaymentService {
       final orderResponse = jsonDecode(response.body);
 
       // Validar que la respuesta contiene los datos esperados
-      if (orderResponse['status'] == 'success' &&
-          orderResponse.containsKey('ticket_number')) {
-        return orderResponse;
+      if (orderResponse['status'] == 'success') {
+        return {
+          ...orderResponse,
+          // Include additional fields from the table if needed
+          "order_details": {
+            "color_id": orderResponse['color_id'] ?? "",
+            "order_distribo": orderDistrito,
+            "date_status": DateTime.now().toString(),
+          }
+        };
       } else {
         throw Exception("Respuesta de orden inválida: ${response.body}");
       }
