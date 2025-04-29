@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/carrito_provider.dart';
 import 'package:fullventas_app/config/providers/image_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/config/providers/size_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/images_data.dart';
@@ -62,9 +63,24 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
   Widget build(BuildContext context) {
     final ImageDetailUseCase = ref.watch(imageDataProvider);
     bool isLiked = false;
+    Color hexToColor(String hex) {
+      hex = hex.replaceAll("#", "");
+      if (hex.length == 6) {
+        hex = "FF$hex";
+      }
+      return Color(int.parse("0x$hex"));
+    }
 
     final UserDetailUseCase = ref.watch(userDataProvider);
     final SizeDetailUseCase = ref.watch(sizeDataProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return Scaffold(
       appBar: AppBar(
@@ -131,7 +147,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
             ],
           )
         ],
-        backgroundColor: Color(0xFF3391FA),
+        backgroundColor: hexToColor(colorHex),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -139,6 +155,14 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(
+                width: 440,
+                height: 200,
+                child: Image.asset(
+                  'assets/img/img_pesas.jpg',
+                  fit: BoxFit.cover,
+                ),
+              ),
               // Nombre del servicio en la parte superior
               Center(
                 child: Text(
@@ -208,7 +232,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                                   decoration: BoxDecoration(
                                     border: Border.all(
                                       color: isSelected
-                                          ? Color(0xFF3391FA)
+                                          ? hexToColor(colorHex)
                                           : Colors.transparent,
                                       width: 3, // Grosor del borde
                                     ),
@@ -414,7 +438,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                 alignment: Alignment.center,
                 padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                 decoration: BoxDecoration(
-                  color: Color(0xFF3391FA), // Color de fondo azul
+                  color: hexToColor(colorHex), // Color de fondo azul
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -554,7 +578,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                     ).show();
                   },
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF3391FA),
+                      backgroundColor: hexToColor(colorHex),
                       padding:
                           EdgeInsets.symmetric(vertical: 12, horizontal: 40),
                       shape: RoundedRectangleBorder(
@@ -592,7 +616,7 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFF3391FA),
+                      backgroundColor: hexToColor(colorHex),
                       padding:
                           EdgeInsets.symmetric(vertical: 12, horizontal: 40),
                       shape: RoundedRectangleBorder(
@@ -614,6 +638,17 @@ class DetailProductPageState extends ConsumerState<DetailProductPage> {
                       )
                     ],
                   ),
+                ),
+              ),
+              SizedBox(
+                height: 16,
+              ),
+              SizedBox(
+                width: 339,
+                height: 180,
+                child: Image.asset(
+                  'assets/img/img_pesas.jpg',
+                  fit: BoxFit.cover,
                 ),
               ),
               SizedBox(

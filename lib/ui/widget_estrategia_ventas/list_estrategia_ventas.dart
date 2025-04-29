@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/estrategia_ventas_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/estrategia_ventas_data.dart';
 import 'package:fullventas_app/ui/detail_pages/detail_estrategia_venta_page.dart';
 import 'package:awesome_dialog/awesome_dialog.dart';
@@ -10,10 +11,27 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 class ListEstrategiaVentas extends ConsumerWidget {
   const ListEstrategiaVentas({super.key});
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final EstrategiaVentasDetailUseCase =
         ref.watch(estrategiaVentasDataProvider);
+
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return FutureBuilder<List<EstrategiaVentasData>>(
         future: EstrategiaVentasDetailUseCase.getEstrategiaVentasData(),
@@ -32,7 +50,7 @@ class ListEstrategiaVentas extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 0.0),
                     child: Container(
                       width: double.infinity,
-                      color: Color(0xFF3391FA),
+                      color: hexToColor(colorHex),
                       padding: EdgeInsets.all(8.0),
                       child: GridView.builder(
                         shrinkWrap: true,

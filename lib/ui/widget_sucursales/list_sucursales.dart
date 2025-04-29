@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/config/providers/sucursales_data_Provder.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/sucursales_data.dart';
 import 'package:fullventas_app/ui/widget_sucursales/full_screen_map.dart';
@@ -9,10 +10,26 @@ import 'package:flutter_map/flutter_map.dart';
 class ListSucursales extends ConsumerWidget {
   const ListSucursales({super.key});
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // TODO: implement build
     final SucursalesDetailUseCase = ref.watch(sucursalesDataProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return FutureBuilder<List<SucursalesData>>(
       future: SucursalesDetailUseCase.getSucursalesData(),
@@ -51,7 +68,7 @@ class ListSucursales extends ConsumerWidget {
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 20,
-                                  color: Color(0xFF3391FA),
+                                  color: hexToColor(colorHex),
                                 ),
                               ),
                             ),
@@ -115,7 +132,7 @@ class ListSucursales extends ConsumerWidget {
                                   right: 8,
                                   child: FloatingActionButton(
                                     mini: true,
-                                    backgroundColor: Color(0xFF3391FA),
+                                    backgroundColor: hexToColor(colorHex),
                                     onPressed: () {
                                       showModalBottomSheet(
                                         context: context,
@@ -189,7 +206,7 @@ class ListSucursales extends ConsumerWidget {
                                   Divider(),
                                   ListTile(
                                     leading: Icon(Icons.email,
-                                        color: Color(0xFF3391FA)),
+                                        color: hexToColor(colorHex)),
                                     title:
                                         Text(sucursal.correo ?? 'Sin correo'),
                                   ),

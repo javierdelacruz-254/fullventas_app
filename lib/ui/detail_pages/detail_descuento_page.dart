@@ -2,12 +2,15 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/carrito_provider.dart';
 import 'package:fullventas_app/config/providers/descuentos_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/config/providers/size_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/descuentos_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/size_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/user_data.dart';
+import 'package:fullventas_app/ui/pages/carrito_page.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
 import 'package:fullventas_app/ui/widgets_products/video_widget.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -56,15 +59,33 @@ class DetailDescuentoPageState extends ConsumerState<DetailDescuentoPage> {
   @override
   Widget build(BuildContext context) {
     bool isLiked = false;
+    Color hexToColor(String hex) {
+      hex = hex.replaceAll("#", "");
+      if (hex.length == 6) {
+        hex = "FF$hex";
+      }
+      return Color(int.parse("0x$hex"));
+    }
 
     final UserDetailUseCase = ref.watch(userDataProvider);
     final DescuentosDetailUseCase = ref.watch(descuentosDataProvider);
     final SizeDetailUseCase = ref.watch(sizeDataProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Colors.white,
+          ),
           onPressed: () {
             Navigator.pop(context); // Regresa a la pantalla anterior
           },
@@ -72,7 +93,10 @@ class DetailDescuentoPageState extends ConsumerState<DetailDescuentoPage> {
         title: SizedBox(), // No se muestra texto en el AppBar
         actions: [
           IconButton(
-            icon: Icon(Icons.home),
+            icon: Icon(
+              Icons.home,
+              color: Colors.white,
+            ),
             onPressed: () {
               Navigator.pushReplacement(
                 context,
@@ -82,14 +106,45 @@ class DetailDescuentoPageState extends ConsumerState<DetailDescuentoPage> {
               );
             },
           ),
-          IconButton(
-            icon: Icon(Icons.shopping_cart),
-            onPressed: () {
-              // Lógica para navegar al carrito, si es necesario
-            },
-          ),
+          Stack(
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CarritoPage()),
+                  );
+                },
+                icon: const Icon(Icons.shopping_cart, color: Colors.white),
+              ),
+              Positioned(
+                right: 5,
+                top: 5,
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final totalCantidad = ref
+                        .watch(carritoProvider)
+                        .fold(0, (sum, item) => sum + item['cantidad'] as int);
+
+                    return totalCantidad > 0
+                        ? CircleAvatar(
+                            backgroundColor: Colors.red,
+                            radius: 8,
+                            child: Text(
+                              totalCantidad
+                                  .toString(), // Ahora muestra la cantidad real
+                              style:
+                                  TextStyle(fontSize: 10, color: Colors.white),
+                            ),
+                          )
+                        : SizedBox(); // No mostrar si el carrito está vacío
+                  },
+                ),
+              ),
+            ],
+          )
         ],
-        backgroundColor: Colors.blue,
+        backgroundColor: hexToColor(colorHex),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -97,6 +152,14 @@ class DetailDescuentoPageState extends ConsumerState<DetailDescuentoPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(
+                width: 440,
+                height: 200,
+                child: Image.asset(
+                  'assets/img/img_pesas.jpg',
+                  fit: BoxFit.cover,
+                ),
+              ),
               Center(
                 child: Text(
                   utf8.decode(latin1
@@ -285,7 +348,7 @@ class DetailDescuentoPageState extends ConsumerState<DetailDescuentoPage> {
                   alignment: Alignment.center,
                   padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.blue, // Color de fondo azul
+                    color: hexToColor(colorHex), // Color de fondo azul
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -409,7 +472,7 @@ class DetailDescuentoPageState extends ConsumerState<DetailDescuentoPage> {
                 child: ElevatedButton(
                   onPressed: () {},
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: hexToColor(colorHex),
                       padding:
                           EdgeInsets.symmetric(vertical: 12, horizontal: 40),
                       shape: RoundedRectangleBorder(
@@ -431,6 +494,17 @@ class DetailDescuentoPageState extends ConsumerState<DetailDescuentoPage> {
                       )
                     ],
                   ),
+                ),
+              ),
+              SizedBox(
+                height: 16,
+              ),
+              SizedBox(
+                width: 339,
+                height: 180,
+                child: Image.asset(
+                  'assets/img/img_pesas.jpg',
+                  fit: BoxFit.cover,
                 ),
               ),
             ],

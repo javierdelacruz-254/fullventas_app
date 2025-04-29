@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/login_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
+import 'package:fullventas_app/config/providers/user_info_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/cliente_data.dart';
+import 'package:fullventas_app/domain/models/fullventas_data/user_info_data.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
 import 'package:fullventas_app/ui/widgets/logo.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_signin_button/flutter_signin_button.dart';
+import 'package:lottie/lottie.dart';
 
 class GoogleSignInApi {
   static final _googleSignIn = GoogleSignIn();
@@ -36,7 +41,86 @@ class LoginPageState extends ConsumerState<LoginPage> {
     });
   }
 
-  Future signIn(BuildContext context, WidgetRef ref) async {
+  Future<void> checkUserStatus(
+      BuildContext context, WidgetRef ref, Function onSuccess) async {
+    final userInfo = ref.read(userInfoDataProvider);
+    final List<UserInfoData> userStatus = await userInfo.getUserInfoData();
+
+    if (userStatus.isNotEmpty && userStatus.first.status == 0) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return WillPopScope(
+            onWillPop: () async {
+              SystemNavigator.pop();
+              return false;
+            },
+            child: AlertDialog(
+              backgroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(15),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Lottie.asset(
+                    'assets/img/technical_error.json',
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                  ),
+                  SizedBox(
+                    height: 20,
+                  ),
+                  Text(
+                    'Hay problemas tecnicos',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(
+                    height: 10,
+                  ),
+                  Text(
+                    'Intentalo mas tarde',
+                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(
+                    height: 20,
+                  ),
+                  ElevatedButton(
+                      onPressed: () {
+                        SystemNavigator.pop();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFF3391FA),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+                      ),
+                      child: Text(
+                        'Salir',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ))
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    } else {
+      onSuccess();
+    }
+  }
+
+  Future<void> signIn(BuildContext context, WidgetRef ref) async {
     await GoogleSignIn().signOut();
     final user = await GoogleSignInApi.login();
 
@@ -46,19 +130,24 @@ class LoginPageState extends ConsumerState<LoginPage> {
       ));
       return;
     }
+    checkUserStatus(
+      context,
+      ref,
+      () {
+        final googleUser = ClienteData(
+          nombres: user.displayName ?? "Usuario",
+          email: user.email,
+        );
 
-    final googleUser = ClienteData(
-      nombres: user.displayName ?? "Usuario",
-      email: user.email,
+        ref.read(userProvider.notifier).setUser(googleUser, isGoogleUser: true);
+
+        print(
+            "Usuario guardado en Provider: ${googleUser.nombres}, ${googleUser.email}");
+
+        Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => HomePage()));
+      },
     );
-
-    ref.read(userProvider.notifier).setUser(googleUser, isGoogleUser: true);
-
-    print(
-        "Usuario guardado en Provider: ${googleUser.nombres}, ${googleUser.email}");
-
-    Navigator.of(context)
-        .pushReplacement(MaterialPageRoute(builder: (context) => HomePage()));
   }
 
   Future<void> loginWithCode(BuildContext context) async {
@@ -83,12 +172,13 @@ class LoginPageState extends ConsumerState<LoginPage> {
     });
 
     if (cliente != null) {
-      ref.read(userProvider.notifier).setUser(cliente);
-
-      Future.delayed(Duration(seconds: 1), () {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => HomePage()),
-        );
+      checkUserStatus(context, ref, () {
+        ref.read(userProvider.notifier).setUser(cliente);
+        Future.delayed(Duration(seconds: 1), () {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => HomePage()),
+          );
+        });
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -97,10 +187,28 @@ class LoginPageState extends ConsumerState<LoginPage> {
     }
   }
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final UserInfoDetailUseCase = ref.watch(userInfoDataProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+
     return Scaffold(
-      backgroundColor: Color(0xFF3391FA),
+      backgroundColor: hexToColor(secondColor),
       body: SingleChildScrollView(
         child: Padding(
           padding: EdgeInsets.symmetric(horizontal: 30.0, vertical: 150),
@@ -130,7 +238,7 @@ class LoginPageState extends ConsumerState<LoginPage> {
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white70,
+                  color: Colors.black54,
                 ),
               ),
               SizedBox(height: 15.0),
@@ -169,14 +277,10 @@ class LoginPageState extends ConsumerState<LoginPage> {
                   height: 50,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF2196F3), Color(0xFF21CBF3)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: hexToColor(colorHex),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blueAccent.withOpacity(0.3),
+                        color: hexToColor(secondColor).withOpacity(0.3),
                         blurRadius: 10,
                         offset: Offset(0, 5),
                       ),
@@ -208,7 +312,7 @@ class LoginPageState extends ConsumerState<LoginPage> {
                 child: Text(
                   "¿Olvidaste tu código?",
                   style: TextStyle(
-                    color: Colors.white54,
+                    color: Colors.black54,
                   ),
                 ),
               ),

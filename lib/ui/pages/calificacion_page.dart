@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/calificacion_instructor_data_provider.dart';
 import 'package:fullventas_app/config/providers/instructor_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/calificacion_instructor_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/instructor_data.dart';
@@ -24,9 +25,26 @@ class CalificacionPageState extends ConsumerState<CalificacionPage> {
     final InstructorDetailUseCase = ref.watch(instructorDataProvider);
     final user = ref.watch(userProvider);
 
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+
+    Color hexToColor(String hex) {
+      hex = hex.replaceAll("#", "");
+      if (hex.length == 6) {
+        hex = "FF$hex";
+      }
+      return Color(int.parse("0x$hex"));
+    }
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xFF3391FA),
+        backgroundColor: hexToColor(colorHex),
         leading: IconButton(
           onPressed: () {
             Navigator.pop(context);
@@ -90,7 +108,7 @@ class CalificacionPageState extends ConsumerState<CalificacionPage> {
                 return IconButton(
                   icon: Icon(
                     index < _puntaje ? Icons.star : Icons.star_border,
-                    color: Colors.amber,
+                    color: hexToColor(colorHex),
                   ),
                   onPressed: () {
                     setState(() {
@@ -135,7 +153,7 @@ class CalificacionPageState extends ConsumerState<CalificacionPage> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF3391FA),
+                backgroundColor: hexToColor(colorHex),
                 padding:
                     const EdgeInsets.symmetric(vertical: 16, horizontal: 100),
                 shape: RoundedRectangleBorder(

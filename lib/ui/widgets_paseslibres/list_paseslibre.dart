@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/pases_libre_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/pases_libre_data.dart';
 import 'package:fullventas_app/ui/detail_pages/detail_pase_libre_page.dart';
 import 'package:intl/intl.dart';
@@ -10,9 +11,25 @@ import 'package:intl/intl.dart';
 class ListPasesLibre extends ConsumerWidget {
   const ListPasesLibre({super.key});
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final PasesLibreDetailUseCase = ref.watch(paseslibreDataProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return FutureBuilder<List<PasesLibreData>>(
       future: PasesLibreDetailUseCase.getPasesLibresData(),
@@ -36,7 +53,7 @@ class ListPasesLibre extends ConsumerWidget {
                     return Card(
                       margin: const EdgeInsets.symmetric(vertical: 10),
                       elevation: 10,
-                      shadowColor: Color(0xFF3391FA),
+                      shadowColor: hexToColor(colorHex),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
@@ -51,10 +68,10 @@ class ListPasesLibre extends ConsumerWidget {
                                 Text(
                                   utf8.decode(latin1.encode(
                                       paselibre.NombrePase ?? 'Sin nombre')),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF3391FA),
+                                    color: hexToColor(colorHex),
                                   ),
                                 ),
                                 Container(
@@ -65,7 +82,7 @@ class ListPasesLibre extends ConsumerWidget {
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
                                           color: paselibre.Estado == 1
-                                              ? Color(0xFF3391FA)
+                                              ? hexToColor(colorHex)
                                               : Colors.blueGrey)),
                                   child: Text(
                                     paselibre.Estado == 1
@@ -75,7 +92,7 @@ class ListPasesLibre extends ConsumerWidget {
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                       color: paselibre.Estado == 1
-                                          ? Color(0xFF3391FA)
+                                          ? hexToColor(colorHex)
                                           : Colors.blueGrey,
                                     ),
                                   ),
@@ -92,7 +109,7 @@ class ListPasesLibre extends ConsumerWidget {
                                   style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF3391FA)),
+                                      color: hexToColor(colorHex)),
                                 ),
                                 const SizedBox(
                                   height: 10,
@@ -196,7 +213,7 @@ class ListPasesLibre extends ConsumerWidget {
                                     );
                                   },
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Color(0xFF3391FA),
+                                    backgroundColor: hexToColor(colorHex),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
                                     ),
@@ -213,7 +230,8 @@ class ListPasesLibre extends ConsumerWidget {
                                 ElevatedButton(
                                   onPressed: () {},
                                   style: ElevatedButton.styleFrom(
-                                    side: BorderSide(color: Color(0xFF3391FA)),
+                                    side:
+                                        BorderSide(color: hexToColor(colorHex)),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
                                     ),
@@ -221,7 +239,8 @@ class ListPasesLibre extends ConsumerWidget {
                                   child: Text(
                                     'Inscribirse',
                                     style: TextStyle(
-                                        fontSize: 15, color: Color(0xFF3391FA)),
+                                        fontSize: 15,
+                                        color: hexToColor(colorHex)),
                                   ),
                                 ),
                               ],

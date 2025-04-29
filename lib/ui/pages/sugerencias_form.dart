@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/destination_type_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/config/providers/sucursales_data_Provder.dart';
 import 'package:fullventas_app/config/providers/sugerencias_data_provider.dart';
 import 'package:fullventas_app/config/providers/sugerencias_type_data_provider.dart';
@@ -115,11 +116,28 @@ class SugerenciasFormState extends ConsumerState<SugerenciasForm> {
     }
   }
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xFF3391FA),
+        backgroundColor: hexToColor(colorHex),
         leading: IconButton(
           onPressed: () {
             Navigator.pop(context);
@@ -207,7 +225,7 @@ class SugerenciasFormState extends ConsumerState<SugerenciasForm> {
               ElevatedButton(
                 onPressed: _subnmitSugerencia,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF3391FA),
+                  backgroundColor: hexToColor(colorHex),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),

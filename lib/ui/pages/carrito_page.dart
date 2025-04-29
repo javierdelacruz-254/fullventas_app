@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/carrito_provider.dart';
 import 'package:fullventas_app/config/providers/envios_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/config/providers/sucursales_data_Provder.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/envios_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/estrategia_ventas_data.dart';
@@ -32,9 +33,25 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
     envio = 0.00;
   }
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context) {
     final carrito = ref.watch(carritoProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
 
     double subtotal =
         carrito.fold(0, (sum, item) => sum + (item['subtotal'] ?? 0));
@@ -46,7 +63,7 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
           "Carrito de Compras",
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Color(0xFF3391FA),
+        backgroundColor: hexToColor(colorHex),
         leading: IconButton(
           onPressed: () {
             Navigator.pop(context);
@@ -111,6 +128,15 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
   }
 
   Widget _buildCarritoVacio() {
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -129,7 +155,8 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
                 ),
               );
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF3391FA)),
+            style:
+                ElevatedButton.styleFrom(backgroundColor: hexToColor(colorHex)),
             child: Text(
               "Agregar productos",
               style: TextStyle(color: Colors.white),
@@ -436,6 +463,15 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
 
     List<EnviosData> ciudadesDisponible = [];
 
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+
     return await showDialog<double>(
           context: context,
           barrierDismissible: false,
@@ -449,7 +485,7 @@ class CarritoPageState extends ConsumerState<CarritoPage> {
                   title: Container(
                     padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Color(0xFF3391FA), // Color de fondo del título
+                      color: hexToColor(colorHex), // Color de fondo del título
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(10),
                         topRight: Radius.circular(10),

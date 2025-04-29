@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/carrito_provider.dart';
 import 'package:fullventas_app/config/providers/estrategia_ventas_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
+import 'package:fullventas_app/ui/pages/carrito_page.dart';
 import 'package:fullventas_app/ui/widget_estrategia_ventas/carrusel_estrategia_ventas.dart';
 import 'package:fullventas_app/ui/widget_estrategia_ventas/list_descuentos.dart';
 import 'package:fullventas_app/ui/widget_estrategia_ventas/list_estrategia_ventas.dart';
@@ -8,16 +11,33 @@ import 'package:fullventas_app/ui/widget_estrategia_ventas/list_estrategia_venta
 class EstrategiaVentasPage extends ConsumerWidget {
   const EstrategiaVentasPage({super.key});
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final EstrategiaVentasDetailUseCase =
         ref.watch(estrategiaVentasDataProvider);
     final searchQuery = ref.watch(searchQueryEstrategia);
 
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+
     return Scaffold(
-      backgroundColor: Color(0xFF3391FA),
+      backgroundColor: hexToColor(colorHex),
       appBar: AppBar(
-        backgroundColor: Color(0xFF3391FA),
+        backgroundColor: hexToColor(colorHex),
         leading: IconButton(
           onPressed: () {
             Navigator.pop(context);
@@ -55,13 +75,43 @@ class EstrategiaVentasPage extends ConsumerWidget {
               color: Colors.white,
             ),
           ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(
-              Icons.shopping_cart,
-              color: Colors.white,
-            ),
-          ),
+          Stack(
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CarritoPage()),
+                  );
+                },
+                icon: const Icon(Icons.shopping_cart, color: Colors.white),
+              ),
+              Positioned(
+                right: 5,
+                top: 5,
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final totalCantidad = ref
+                        .watch(carritoProvider)
+                        .fold(0, (sum, item) => sum + item['cantidad'] as int);
+
+                    return totalCantidad > 0
+                        ? CircleAvatar(
+                            backgroundColor: Colors.red,
+                            radius: 8,
+                            child: Text(
+                              totalCantidad
+                                  .toString(), // Ahora muestra la cantidad real
+                              style:
+                                  TextStyle(fontSize: 10, color: Colors.white),
+                            ),
+                          )
+                        : SizedBox(); // No mostrar si el carrito está vacío
+                  },
+                ),
+              ),
+            ],
+          )
         ],
       ),
       body: SingleChildScrollView(
@@ -69,7 +119,7 @@ class EstrategiaVentasPage extends ConsumerWidget {
           children: [
             Container(
               width: double.infinity,
-              color: Color(0xFF3391FA),
+              color: hexToColor(colorHex),
               padding: EdgeInsets.all(8.0),
               child: Align(
                 alignment: Alignment.center,
@@ -87,7 +137,7 @@ class EstrategiaVentasPage extends ConsumerWidget {
             //-------------------
             Container(
               width: double.infinity,
-              color: Color(0xFFB1D8F1),
+              color: hexToColor(secondColor),
               padding: EdgeInsets.symmetric(vertical: 20.0),
               child: Column(
                 children: [
@@ -98,10 +148,17 @@ class EstrategiaVentasPage extends ConsumerWidget {
                 ],
               ),
             ),
-
+            SizedBox(
+              width: 440,
+              height: 140,
+              child: Image.asset(
+                'assets/img/img_pesas.jpg',
+                fit: BoxFit.cover,
+              ),
+            ),
             Container(
               width: double.infinity,
-              color: Color(0xFF3391FA),
+              color: hexToColor(colorHex),
               padding: EdgeInsets.all(8.0),
               child: Text(
                 "Explorar",
@@ -115,6 +172,14 @@ class EstrategiaVentasPage extends ConsumerWidget {
             ),
             ListEstrategiaVentas(),
             ListDescuentos(),
+            SizedBox(
+              width: 339,
+              height: 200,
+              child: Image.asset(
+                'assets/img/img_pesas.jpg',
+                fit: BoxFit.cover,
+              ),
+            ),
           ],
         ),
       ),

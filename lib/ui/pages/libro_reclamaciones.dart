@@ -4,6 +4,7 @@ import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/reclamo_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/config/providers/ubigeo_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/reclamo_data.dart';
@@ -152,9 +153,26 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
         ref.watch(provinciasDataProvider(departamentoSeleccionado ?? ""));
     final distritosProvider =
         ref.watch(distritosDataProvider(provinciaSeleccionada ?? ""));
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+
+    Color hexToColor(String hex) {
+      hex = hex.replaceAll("#", "");
+      if (hex.length == 6) {
+        hex = "FF$hex";
+      }
+      return Color(int.parse("0x$hex"));
+    }
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xFF3391FA),
+        backgroundColor: hexToColor(colorHex),
         title: Text(
           "Libro de Reclamaciones",
           style: TextStyle(color: Colors.white),
@@ -470,7 +488,7 @@ class LibroReclamacionesState extends ConsumerState<LibroReclamaciones> {
                 ElevatedButton(
                   onPressed: registrarReclamo,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFF3391FA),
+                    backgroundColor: hexToColor(colorHex),
                     padding: EdgeInsets.symmetric(vertical: 15.0),
                     textStyle: TextStyle(fontSize: 18),
                   ),

@@ -2,11 +2,13 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/publicaciones_data.dart';
 import 'package:intl/intl.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
-class DetailPublicacionPage extends StatefulWidget {
+class DetailPublicacionPage extends ConsumerStatefulWidget {
   final PublicacionesData publicacionesData;
 
   const DetailPublicacionPage({super.key, required this.publicacionesData});
@@ -15,7 +17,7 @@ class DetailPublicacionPage extends StatefulWidget {
   DetailPublicacionPageState createState() => DetailPublicacionPageState();
 }
 
-class DetailPublicacionPageState extends State<DetailPublicacionPage> {
+class DetailPublicacionPageState extends ConsumerState<DetailPublicacionPage> {
   late YoutubePlayerController _controller;
   late bool isLiked;
 
@@ -57,22 +59,47 @@ class DetailPublicacionPageState extends State<DetailPublicacionPage> {
   @override
   Widget build(BuildContext context) {
     bool esVideo = widget.publicacionesData.tipoSeccion == 'video';
+    Color hexToColor(String hex) {
+      hex = hex.replaceAll("#", "");
+      if (hex.length == 6) {
+        hex = "FF$hex";
+      }
+      return Color(int.parse("0x$hex"));
+    }
+
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return Scaffold(
-      backgroundColor: Colors.blue,
+      backgroundColor: hexToColor(colorHex),
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Colors.white,
+          ),
+          onPressed: () {
+            Navigator.pop(context); // Regresa a la pantalla anterior
+          },
+        ),
         title: Text(''),
-        backgroundColor: Colors.blue,
+        backgroundColor: hexToColor(colorHex),
         actions: [
           IconButton(
             icon: Icon(Icons.home),
             onPressed: () {},
-            color: Colors.black,
+            color: Colors.white,
           ),
         ],
       ),
       body: Container(
-        color: Colors.blue,
+        color: hexToColor(colorHex),
         child: SingleChildScrollView(
           child: Padding(
             padding: const EdgeInsets.only(

@@ -1,6 +1,6 @@
 class AppRoutes {
   static const String baseUrl =
-      'http://192.168.1.3/mystore/gull_ventas_php_project';
+      'http://192.168.1.9/mystore/gull_ventas_php_project';
   static const String postCalificacion =
       '$baseUrl/insert_calificacion_instructor.php';
   static const String getCategorias = '$baseUrl/get_categories.php';
@@ -52,4 +52,6 @@ class AppRoutes {
   static const String postReclamo = '$baseUrl/insert_reclamo.php';
   static String getEnvios(int sucursalId) =>
       '$baseUrl/get_enviosBy.php?sucursal_id=$sucursalId';
+  static String getPublicidad(String seccion) =>
+      '$baseUrl/get_publicidad.php?seccion=$seccion';
 }

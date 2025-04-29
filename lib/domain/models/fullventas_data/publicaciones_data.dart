@@ -15,6 +15,7 @@ class PublicacionesData {
     this.titulo,
     this.imagen,
     this.categoria,
+    this.id_especialidad,
     this.fechaCreacion,
     this.estado,
     this.tipoSeccion,
@@ -44,12 +45,14 @@ class PublicacionesData {
     this.tipoAdjunto32,
     this.adjunto32Imagen,
     this.adjunto32Video,
+    this.image_name,
   });
   final int? id;
   final int? userId;
   final String? titulo;
   final String? imagen;
   final String? categoria;
+  final int? id_especialidad;
   final DateTime? fechaCreacion;
   final String? estado;
   final String? tipoSeccion;
@@ -79,6 +82,7 @@ class PublicacionesData {
   final String? tipoAdjunto32;
   final String? adjunto32Imagen;
   final String? adjunto32Video;
+  final String? image_name;
 
   factory PublicacionesData.fromJson(Map<String, dynamic> json) =>
       PublicacionesData(
@@ -87,6 +91,7 @@ class PublicacionesData {
         titulo: json['titulo'] as String?,
         imagen: json['imagen'] as String?,
         categoria: json['categoria'] as String?,
+        id_especialidad: int.tryParse(json['id_especialidad'].toString()) ?? 0,
         fechaCreacion: json['fecha_creacion'] != null
             ? DateTime.tryParse(json['fecha_creacion'])
             : null,
@@ -118,6 +123,7 @@ class PublicacionesData {
         tipoAdjunto32: json['tipo_adjunto3_2'] as String?,
         adjunto32Imagen: json['adjunto3_2_imagen'] as String?,
         adjunto32Video: json['adjunto3_2_video'] as String?,
+        image_name: json['image_name']?.toString(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -126,6 +132,7 @@ class PublicacionesData {
         "titulo": titulo,
         "imagen": imagen,
         "categoria": categoria,
+        "id_especialidad": id_especialidad,
         "fecha_creacion": fechaCreacion,
         "estado": estado,
         "tipo_seccion": tipoSeccion,
@@ -155,5 +162,6 @@ class PublicacionesData {
         "tipo_adjunto3_2": tipoAdjunto32,
         "adjunto3_2_imagen": adjunto32Imagen,
         "adjunto3_2_video": adjunto32Video,
+        "image_name": image_name,
       };
 }

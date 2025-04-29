@@ -1,7 +1,7 @@
-import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/categories_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/categories_data.dart';
 import 'package:fullventas_app/ui/pages/calificacion_page.dart';
 import 'package:fullventas_app/ui/pages/estrategia_ventas_page.dart';
@@ -20,10 +20,32 @@ import 'package:fullventas_app/ui/pages/videos_page.dart';
 class CategoriesGrid extends ConsumerWidget {
   const CategoriesGrid({super.key});
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // TODO: implement build
     final CategoriesDetailUseCase = ref.watch(categoriesDataProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String colorTexto = screenData.isNotEmpty
+        ? screenData.first.color_texto ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String colorTextoSecond = screenData.isNotEmpty
+        ? screenData.first.color_text_sec ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return FutureBuilder<List<CategoriesData>>(
       future: CategoriesDetailUseCase.getCategoriesData(),
@@ -35,7 +57,9 @@ class CategoriesGrid extends ConsumerWidget {
         } else if (!snapshot.hasData || snapshot.data == null) {
           return Center(child: Text('No se encontró información'));
         } else {
-          final categories = snapshot.data!;
+          final categories =
+              snapshot.data!.where((c) => c.status == 1).toList();
+
           return categories.isEmpty
               ? Center(child: CircularProgressIndicator())
               : GridView.builder(
@@ -50,45 +74,29 @@ class CategoriesGrid extends ConsumerWidget {
                   itemCount: categories.length,
                   itemBuilder: (context, index) {
                     final category = categories[index];
-                    final bool isActive = category.status == 1;
 
                     return GestureDetector(
                       onTap: () {
-                        if (isActive) {
-                          navigateToCategoryScreen(context, category.title!);
-                        } else {
-                          AwesomeDialog(
-                            context: context,
-                            dialogType: DialogType.warning,
-                            animType: AnimType.bottomSlide,
-                            title: 'Módulo inactivo',
-                            desc:
-                                'Por el momento, esta módulo se encuentra inactivo.',
-                            btnOkOnPress: () {},
-                            btnOkColor: Colors.orange,
-                          ).show();
-                        }
+                        navigateToCategoryScreen(context, category.title!);
                       },
-                      child: Opacity(
-                        opacity: isActive ? 1.0 : 0.5,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.max,
-                          children: [
-                            Expanded(
-                                child: Card(
-                              color: Color(0xFF3391FA),
-                              elevation: 4.0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.0),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(10.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.max,
+                        children: [
+                          Expanded(
+                              child: Card(
+                            color: hexToColor(colorHex),
+                            elevation: 4.0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10.0),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(10.0),
+                              child: Padding(
+                                padding: EdgeInsets.all(10.0),
                                 child: Image.network(
                                   category.image_name!,
                                   fit: BoxFit.cover,
-                                  color: isActive ? Colors.white : Colors.grey,
-                                  colorBlendMode:
-                                      isActive ? null : BlendMode.saturation,
+                                  color: Colors.white,
                                   errorBuilder: (context, error, stackTrace) {
                                     return Container(
                                       width: double.infinity,
@@ -103,22 +111,20 @@ class CategoriesGrid extends ConsumerWidget {
                                   },
                                 ),
                               ),
-                            )),
-                            SizedBox(height: 5.0),
-                            Text(
-                              category.title!, // Mostrar el título
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                  fontSize: 10.0,
-                                  fontWeight: FontWeight.bold,
-                                  color: isActive
-                                      ? Colors.black
-                                      : Colors.grey.shade900),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
-                          ],
-                        ),
+                          )),
+                          SizedBox(height: 5.0),
+                          Text(
+                            category.title!, // Mostrar el título
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 10.0,
+                                fontWeight: FontWeight.bold,
+                                color: hexToColor(colorTextoSecond)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     );
                   },
@@ -165,6 +171,7 @@ class CategoriesGrid extends ConsumerWidget {
       case 'MAQUINAS':
         screen = MaquinasPage();
         break;
+      case 'GUIA DE ENTRENAMIENTO':
       case 'LIBRO DE RECLAMACIONES':
         screen = LibroReclamaciones();
         break;

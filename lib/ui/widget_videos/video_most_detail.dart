@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/publicaciones_data.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
-class VideoMostDetail extends StatefulWidget {
+class VideoMostDetail extends ConsumerStatefulWidget {
   final PublicacionesData videoSeleccionado;
   final List<PublicacionesData> videosDeCategoria;
 
@@ -16,10 +18,17 @@ class VideoMostDetail extends StatefulWidget {
   VideoMostDetailState createState() => VideoMostDetailState();
 }
 
-class VideoMostDetailState extends State<VideoMostDetail> {
+class VideoMostDetailState extends ConsumerState<VideoMostDetail> {
   late YoutubePlayerController _controller;
   late PublicacionesData _videoActual;
   bool isLiked = false;
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
 
   @override
   void initState() {
@@ -60,14 +69,26 @@ class VideoMostDetailState extends State<VideoMostDetail> {
 
   @override
   Widget build(BuildContext context) {
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.blue,
+        backgroundColor: hexToColor(colorHex),
         leading: IconButton(
           onPressed: () {
             Navigator.pop(context);
           },
-          icon: const Icon(Icons.arrow_back_ios),
+          icon: const Icon(
+            Icons.arrow_back_ios,
+            color: Colors.white,
+          ),
         ),
         actions: [
           IconButton(
@@ -79,7 +100,10 @@ class VideoMostDetailState extends State<VideoMostDetail> {
                 ),
               );
             },
-            icon: Icon(Icons.home),
+            icon: Icon(
+              Icons.home,
+              color: Colors.white,
+            ),
           )
         ],
       ),
@@ -150,7 +174,9 @@ class VideoMostDetailState extends State<VideoMostDetail> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
-                    color: isSelected ? Colors.red : Colors.blue,
+                    color: isSelected
+                        ? hexToColor(secondColor)
+                        : hexToColor(colorHex),
                     elevation: isSelected ? 4 : 2,
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
@@ -160,7 +186,7 @@ class VideoMostDetailState extends State<VideoMostDetail> {
                         children: [
                           // Ícono de Play centrado
                           const Icon(Icons.play_circle_fill,
-                              color: Colors.blue, size: 40),
+                              color: Colors.blueGrey, size: 40),
                           const SizedBox(height: 5),
 
                           // Título del video

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/config/providers/setting_video_data_provider.dart';
 import 'package:fullventas_app/domain/dto/Video.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
@@ -7,9 +8,32 @@ import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 class VideoWidget extends ConsumerWidget {
   const VideoWidget({super.key});
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final videoAsyncValue = ref.watch(settingVideoDataProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+
+    final String colorTexto = screenData.isNotEmpty
+        ? screenData.first.color_texto ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String colorTextoSecond = screenData.isNotEmpty
+        ? screenData.first.color_text_sec ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return videoAsyncValue.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -38,13 +62,36 @@ class VideoWidget extends ConsumerWidget {
   }
 }
 
-class FeaturedVideo extends StatelessWidget {
+class FeaturedVideo extends ConsumerWidget {
   final Video video;
 
   const FeaturedVideo({super.key, required this.video});
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+
+    final String colorTexto = screenData.isNotEmpty
+        ? screenData.first.color_texto ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String colorTextoSecond = screenData.isNotEmpty
+        ? screenData.first.color_text_sec ?? "#FFFFFF"
+        : "#FFFFFF";
     YoutubePlayerController controller = YoutubePlayerController(
       initialVideoId: video.id,
       flags: YoutubePlayerFlags(autoPlay: false, mute: false),
@@ -72,10 +119,10 @@ class FeaturedVideo extends StatelessWidget {
               child: YoutubePlayer(
                 controller: controller,
                 showVideoProgressIndicator: true,
-                progressIndicatorColor: Colors.blueAccent,
+                progressIndicatorColor: hexToColor(colorHex),
                 progressColors: ProgressBarColors(
-                  playedColor: Colors.blue,
-                  handleColor: Colors.blueAccent,
+                  playedColor: hexToColor(colorHex),
+                  handleColor: hexToColor(colorHex),
                 ),
               ),
             ),
@@ -86,7 +133,7 @@ class FeaturedVideo extends StatelessWidget {
             style: TextStyle(
               fontSize: 16.0,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: hexToColor(colorTextoSecond),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

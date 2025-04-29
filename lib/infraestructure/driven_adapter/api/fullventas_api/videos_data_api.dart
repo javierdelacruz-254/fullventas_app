@@ -7,7 +7,7 @@ import 'package:fullventas_app/infraestructure/helpers/http_helper_get.dart';
 class VideosDataApi extends PublicacionesDataRepo {
   @override
   Future<List<PublicacionesData>> getPublicacionesDataRepo() async {
-    final response = await HttpHelperGet.get(AppRoutes.getPublicaciones);
+    final response = await HttpHelperGet.get(AppRoutes.getVideos);
     if (response.statusCode == 200) {
       final videosData = publicacionesDataFromJson(response.body);
       return videosData;

@@ -23,7 +23,9 @@ class FullScreenMap extends StatelessWidget {
           child: Text(
             nombre,
             style: TextStyle(
-                fontSize: 18, fontWeight: FontWeight.bold, color: Colors.blue),
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black54),
           ),
         ),
         Expanded(

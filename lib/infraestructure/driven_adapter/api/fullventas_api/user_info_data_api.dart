@@ -7,7 +7,7 @@ import 'package:fullventas_app/infraestructure/helpers/http_helper_get.dart';
 class UserInfoDataApi extends UserInfoDataRepo {
   @override
   Future<List<UserInfoData>> getUserInfoDataRepo() async {
-    final response = await HttpHelperGet.get(AppRoutes.getUserInfo);
+    final response = await HttpHelperGet.get(AppRoutes.getUser);
     if (response.statusCode == 200) {
       final userInfoData = userInfoDataFromJson(response.body);
       return userInfoData;

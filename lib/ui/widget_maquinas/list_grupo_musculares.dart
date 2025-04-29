@@ -1,16 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/grupo_musculares_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/grupo_musculares_data.dart';
 import 'package:fullventas_app/ui/widget_maquinas/detalle_maquinas.dart';
 
 class ListGrupoMusculares extends ConsumerWidget {
   const ListGrupoMusculares({super.key});
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // TODO: implement build
     final GrupoMuscularesDetailUseCase = ref.watch(grupoMuscularesDataProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return FutureBuilder<List<GrupoMuscularesData>>(
       future: GrupoMuscularesDetailUseCase.getGrupoMuscularesData(),

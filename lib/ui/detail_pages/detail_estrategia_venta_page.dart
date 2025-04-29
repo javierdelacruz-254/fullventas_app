@@ -5,12 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/carrito_provider.dart';
 import 'package:fullventas_app/config/providers/estrategia_ventas_image_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/config/providers/size_data_provider.dart';
 import 'package:fullventas_app/config/providers/user_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/estrategia_ventas_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/estrategia_ventas_image_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/size_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/user_data.dart';
+import 'package:fullventas_app/ui/pages/carrito_page.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -79,16 +81,34 @@ class DetailEstrategiaVentaPageState
     String? videoUrl = widget.estrategiaVentasData.link_video_one;
     String? videoId =
         videoUrl != null ? YoutubePlayer.convertUrlToId(videoUrl) : null;
+    Color hexToColor(String hex) {
+      hex = hex.replaceAll("#", "");
+      if (hex.length == 6) {
+        hex = "FF$hex";
+      }
+      return Color(int.parse("0x$hex"));
+    }
 
     final UserDetailUseCase = ref.watch(userDataProvider);
     final EstrategiaVentasImageDetailUseCase =
         ref.watch(estrategiaVentasImageDataProvider);
     final SizeDetailUseCase = ref.watch(sizeDataProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Colors.white,
+          ),
           onPressed: () {
             Navigator.pop(context); // Regresa a la pantalla anterior
           },
@@ -96,7 +116,10 @@ class DetailEstrategiaVentaPageState
         title: SizedBox(), // No se muestra texto en el AppBar
         actions: [
           IconButton(
-            icon: Icon(Icons.home),
+            icon: Icon(
+              Icons.home,
+              color: Colors.white,
+            ),
             onPressed: () {
               Navigator.pushReplacement(
                 context,
@@ -106,14 +129,45 @@ class DetailEstrategiaVentaPageState
               );
             },
           ),
-          IconButton(
-            icon: Icon(Icons.shopping_cart),
-            onPressed: () {
-              // Lógica para navegar al carrito, si es necesario
-            },
-          ),
+          Stack(
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CarritoPage()),
+                  );
+                },
+                icon: const Icon(Icons.shopping_cart, color: Colors.white),
+              ),
+              Positioned(
+                right: 5,
+                top: 5,
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final totalCantidad = ref
+                        .watch(carritoProvider)
+                        .fold(0, (sum, item) => sum + item['cantidad'] as int);
+
+                    return totalCantidad > 0
+                        ? CircleAvatar(
+                            backgroundColor: Colors.red,
+                            radius: 8,
+                            child: Text(
+                              totalCantidad
+                                  .toString(), // Ahora muestra la cantidad real
+                              style:
+                                  TextStyle(fontSize: 10, color: Colors.white),
+                            ),
+                          )
+                        : SizedBox(); // No mostrar si el carrito está vacío
+                  },
+                ),
+              ),
+            ],
+          )
         ],
-        backgroundColor: Colors.blue,
+        backgroundColor: hexToColor(colorHex),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -121,6 +175,14 @@ class DetailEstrategiaVentaPageState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(
+                width: 440,
+                height: 200,
+                child: Image.asset(
+                  'assets/img/img_pesas.jpg',
+                  fit: BoxFit.cover,
+                ),
+              ),
               // Nombre del servicio en la parte superior
               Center(
                 child: Text(
@@ -193,7 +255,7 @@ class DetailEstrategiaVentaPageState
                                   decoration: BoxDecoration(
                                     border: Border.all(
                                       color: isSelected
-                                          ? Colors.blue
+                                          ? hexToColor(colorHex)
                                           : Colors.transparent,
                                       width: 3, // Grosor del borde
                                     ),
@@ -347,7 +409,7 @@ class DetailEstrategiaVentaPageState
                   alignment: Alignment.center,
                   padding: EdgeInsets.symmetric(horizontal: 5, vertical: 5),
                   decoration: BoxDecoration(
-                    color: Colors.blue, // Color de fondo azul
+                    color: hexToColor(colorHex), // Color de fondo azul
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -503,7 +565,7 @@ class DetailEstrategiaVentaPageState
                     ).show();
                   },
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: hexToColor(colorHex),
                       padding:
                           EdgeInsets.symmetric(vertical: 12, horizontal: 40),
                       shape: RoundedRectangleBorder(
@@ -525,6 +587,17 @@ class DetailEstrategiaVentaPageState
                       )
                     ],
                   ),
+                ),
+              ),
+              SizedBox(
+                height: 16,
+              ),
+              SizedBox(
+                width: 339,
+                height: 180,
+                child: Image.asset(
+                  'assets/img/img_pesas.jpg',
+                  fit: BoxFit.cover,
                 ),
               ),
             ],

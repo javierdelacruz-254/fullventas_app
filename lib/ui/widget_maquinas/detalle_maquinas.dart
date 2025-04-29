@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/maquinas_data_provider.dart';
 import 'package:fullventas_app/config/providers/musculos_data_Provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/maquinas_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/musculos_data.dart';
 import 'package:fullventas_app/ui/widget_maquinas/vista_image_maquina.dart';
@@ -24,10 +25,26 @@ class DetalleMaquinasState extends ConsumerState<DetalleMaquinas> {
   Widget build(BuildContext context) {
     final MaquinasDetailUseCase = ref.watch(maquinasDataProvider);
     final MusculosDetailUseCase = ref.watch(musculosDataProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
+
+    Color hexToColor(String hex) {
+      hex = hex.replaceAll("#", "");
+      if (hex.length == 6) {
+        hex = "FF$hex";
+      }
+      return Color(int.parse("0x$hex"));
+    }
 
     return Scaffold(
         appBar: AppBar(
-          backgroundColor: Color(0xFF3391FA),
+          backgroundColor: hexToColor(colorHex),
           leading: IconButton(
             onPressed: () {
               Navigator.pop(context);

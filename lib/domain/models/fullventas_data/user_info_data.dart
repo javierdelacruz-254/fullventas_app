@@ -5,7 +5,7 @@ List<UserInfoData> userInfoDataFromJson(String str) {
   return jsonData.map((item) => UserInfoData.fromJson(item)).toList();
 }
 
-String userInfoDataToJson(UserInfoData data) => json.encode(data.toJson());
+String userInfoDataToJson(UserInfoData? data) => json.encode(data!.toJson());
 
 class UserInfoData {
   const UserInfoData({

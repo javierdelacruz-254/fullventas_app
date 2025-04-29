@@ -15,6 +15,7 @@ class ScreenData {
     required this.id_tienda,
     this.color,
     this.codigo,
+    this.color_secundario,
     this.image_logo,
     this.image_icono,
     this.nombre,
@@ -36,6 +37,7 @@ class ScreenData {
     this.div_cat_otros,
     this.url_video,
     this.color_texto,
+    this.color_text_sec,
     required this.estado,
   });
 
@@ -43,6 +45,7 @@ class ScreenData {
   final int? id_tienda;
   final String? color;
   final String? codigo;
+  final String? color_secundario;
   final String? image_logo;
   final String? image_icono;
   final String? nombre;
@@ -64,6 +67,7 @@ class ScreenData {
   final String? div_cat_otros;
   final String? url_video;
   final String? color_texto;
+  final String? color_text_sec;
   final int? estado;
 
   factory ScreenData.fromJson(Map<String, dynamic> json) => ScreenData(
@@ -71,6 +75,7 @@ class ScreenData {
         id_tienda: int.tryParse(json['id_tienda'].toString()) ?? 0,
         color: json['color'] as String?,
         codigo: json['codigo'] as String?,
+        color_secundario: json['color_secundario'] as String?,
         image_logo: json['image_logo'] as String?,
         image_icono: json['image_icono'] as String?,
         nombre: json['nombre'] as String?,
@@ -94,6 +99,7 @@ class ScreenData {
         div_cat_otros: json['div_cat_otros'] as String?,
         url_video: json['url_video'] as String?,
         color_texto: json['color_texto'] as String?,
+        color_text_sec: json['color_text_sec'] as String?,
         estado: int.tryParse(json['estado'].toString()) ?? 0,
       );
 
@@ -102,6 +108,7 @@ class ScreenData {
         "id_tienda": id_tienda,
         "color": color,
         "codigo": codigo,
+        "color_secundario": color_secundario,
         "image_logo": image_logo,
         "image_icono": image_icono,
         "nombre": nombre,
@@ -123,6 +130,7 @@ class ScreenData {
         "div_cat_otros": div_cat_otros,
         "url_video": url_video,
         "color_texto": color_texto,
+        "color_text_sec": color_text_sec,
         "estado": estado?.toString(),
       };
 }

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/products_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/services_data.dart';
 import 'package:fullventas_app/ui/detail_pages/detail_product_page.dart';
 import 'package:intl/intl.dart';
@@ -10,9 +11,25 @@ import 'package:intl/intl.dart';
 class ListProduct extends ConsumerWidget {
   const ListProduct({super.key});
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ServicesDetailUseCase = ref.watch(productsDataProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return FutureBuilder<List<ServicesData>>(
       future: ServicesDetailUseCase.getServicesData(),
@@ -31,7 +48,7 @@ class ListProduct extends ConsumerWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 0.0),
                   child: Container(
                     width: double.infinity,
-                    color: Color(0xFF3391FA),
+                    color: hexToColor(colorHex),
                     padding: EdgeInsets.all(8.0),
                     child: GridView.builder(
                       shrinkWrap: true,

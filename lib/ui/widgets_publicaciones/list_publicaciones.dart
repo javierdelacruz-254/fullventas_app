@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fullventas_app/config/providers/publicaciones_data_provider.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
+import 'package:fullventas_app/domain/models/fullventas_data/publicaciones_data.dart';
 import 'package:fullventas_app/ui/detail_pages/detail_publicacion_page.dart';
 import 'package:fullventas_app/ui/pages/publicaciones_page.dart';
 import 'package:intl/intl.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
 class ListPublicaciones extends ConsumerWidget {
   const ListPublicaciones({super.key});
@@ -13,10 +16,26 @@ class ListPublicaciones extends ConsumerWidget {
     return DateFormat("EEEE d 'de' MMMM y", "en_US").format(fecha);
   }
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final PublicacionesDetailUseCase = ref.watch(publicacionesDataProvider);
     final searchQuery = ref.watch(searchProvider);
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
 
     return FutureBuilder(
       future: PublicacionesDetailUseCase.getPublicacionesData(),
@@ -95,8 +114,10 @@ class ListPublicaciones extends ConsumerWidget {
                                   if (publicacion.fechaCreacion != null &&
                                       publicacion.fechaCreacion!.year > 1)
                                     Text(
-                                      formatearFecha(
-                                          publicacion.fechaCreacion!),
+                                      '${DateFormat('EEEE', 'es_ES').format(publicacion.fechaCreacion!)}, '
+                                      '${publicacion.fechaCreacion!.day} de'
+                                      '${DateFormat('MMMM', 'es_ES').format(publicacion.fechaCreacion!)}'
+                                      'de ${publicacion.fechaCreacion!.year}',
                                       style: const TextStyle(
                                           fontSize: 14, color: Colors.grey),
                                     ),
@@ -114,39 +135,61 @@ class ListPublicaciones extends ConsumerWidget {
     );
   }
 
-  Widget _buildImagen(dynamic publicacion) {
-    String? videoThumbnail;
+  Widget _buildImagen(PublicacionesData publicacion) {
+    print("Link del video: ${publicacion.linkVideo}");
 
-    if ((publicacion.imagen == null || publicacion.imagen!.isEmpty) &&
-        publicacion.link_video != null &&
-        publicacion.link_video!.contains("youtube.com")) {
-      // Extraer ID del video de YouTube
-      final Uri uri = Uri.parse(publicacion.link_video!);
-      final videoId = uri.queryParameters["v"];
-      if (videoId != null) {
-        videoThumbnail = "https://img.youtube.com/vi/$videoId/hqdefault.jpg";
+    if (publicacion.linkVideo == null || publicacion.linkVideo!.isEmpty) {
+      return ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Image.network(
+            publicacion.imagen!,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => _errorImagen(),
+          ),
+        ),
+      );
+    } else if (publicacion.linkVideo != null &&
+        publicacion.linkVideo!.trim().isNotEmpty &&
+        (publicacion.linkVideo!.contains("youtube.com") ||
+            publicacion.linkVideo!.contains("youtu.be"))) {
+      String? videoId = YoutubePlayer.convertUrlToId(publicacion.linkVideo!);
+
+      if (videoId == null) {
+        return const SizedBox.shrink();
       }
+      return ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Stack(
+            children: [
+              YoutubePlayer(
+                controller: YoutubePlayerController(
+                  initialVideoId: videoId,
+                  flags: const YoutubePlayerFlags(
+                    autoPlay: false,
+                    mute: true,
+                    disableDragSeek: true,
+                    loop: false,
+                    controlsVisibleAtStart: false,
+                  ),
+                ),
+                showVideoProgressIndicator: true,
+              ),
+              Positioned.fill(
+                child: Container(
+                  color: Colors.transparent,
+                ),
+              )
+            ],
+          ),
+        ),
+      );
     }
 
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      child: AspectRatio(
-        aspectRatio: 16 / 9,
-        child: publicacion.imagen != null && publicacion.imagen!.isNotEmpty
-            ? Image.network(
-                publicacion.imagen!,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _errorImagen(),
-              )
-            : videoThumbnail != null
-                ? Image.network(
-                    videoThumbnail,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _errorImagen(),
-                  )
-                : _errorImagen(),
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   Widget _errorImagen() {

@@ -1,24 +1,45 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:fullventas_app/config/providers/screen_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/pases_libre_data.dart';
 import 'package:intl/intl.dart';
 
-class DetailPaseLibrePage extends StatelessWidget {
+class DetailPaseLibrePage extends ConsumerWidget {
   final PasesLibreData pase;
 
   const DetailPaseLibrePage({super.key, required this.pase});
 
+  Color hexToColor(String hex) {
+    hex = hex.replaceAll("#", "");
+    if (hex.length == 6) {
+      hex = "FF$hex";
+    }
+    return Color(int.parse("0x$hex"));
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final screenData = ref.watch(screenDataProvider).value ?? [];
+
+    final String colorHex = screenData.isNotEmpty
+        ? screenData.first.codigo ?? "#FFFFFF"
+        : "#FFFFFF";
+    final String secondColor = screenData.isNotEmpty
+        ? screenData.first.color_secundario ?? "#FFFFFF"
+        : "#FFFFFF";
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.blue,
+        backgroundColor: hexToColor(colorHex),
         leading: IconButton(
           onPressed: () {
             Navigator.pop(context);
           },
-          icon: Icon(Icons.arrow_back_ios),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Colors.white,
+          ),
         ),
       ),
       body: Padding(
@@ -28,10 +49,10 @@ class DetailPaseLibrePage extends StatelessWidget {
           children: [
             Text(
               utf8.decode(latin1.encode(pase.NombrePase ?? 'Sin nombre')),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: Colors.blueAccent,
+                color: hexToColor(colorHex),
               ),
             ),
             const SizedBox(height: 10),
@@ -77,11 +98,12 @@ class DetailPaseLibrePage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
               decoration: BoxDecoration(
                 color: pase.Estado == 1
-                    ? const Color.fromARGB(255, 193, 218, 255)
+                    ? hexToColor(secondColor)
                     : Colors.blueGrey.shade100,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: pase.Estado == 1 ? Colors.blueAccent : Colors.blueGrey,
+                  color:
+                      pase.Estado == 1 ? hexToColor(colorHex) : Colors.blueGrey,
                 ),
               ),
               child: Text(
@@ -89,7 +111,8 @@ class DetailPaseLibrePage extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: pase.Estado == 1 ? Colors.blueAccent : Colors.blueGrey,
+                  color:
+                      pase.Estado == 1 ? hexToColor(colorHex) : Colors.blueGrey,
                 ),
               ),
             ),
@@ -102,7 +125,7 @@ class DetailPaseLibrePage extends StatelessWidget {
                     // Aquí puedes agregar la acción de inscripción
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
+                    backgroundColor: hexToColor(colorHex),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),

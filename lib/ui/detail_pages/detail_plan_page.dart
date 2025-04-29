@@ -9,6 +9,7 @@ import 'package:fullventas_app/config/providers/user_data_provider.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/planes_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/planes_image_data.dart';
 import 'package:fullventas_app/domain/models/fullventas_data/user_data.dart';
+import 'package:fullventas_app/ui/pages/carrito_page.dart';
 import 'package:fullventas_app/ui/pages/home_page.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -51,7 +52,10 @@ class DetailPlanPageState extends ConsumerState<DetailPlanPage> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios),
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Colors.white,
+          ),
           onPressed: () {
             Navigator.pop(context); // Regresa a la pantalla anterior
           },
@@ -59,7 +63,10 @@ class DetailPlanPageState extends ConsumerState<DetailPlanPage> {
         title: SizedBox(), // No se muestra texto en el AppBar
         actions: [
           IconButton(
-            icon: Icon(Icons.home),
+            icon: Icon(
+              Icons.home,
+              color: Colors.white,
+            ),
             onPressed: () {
               Navigator.pushReplacement(
                 context,
@@ -69,12 +76,43 @@ class DetailPlanPageState extends ConsumerState<DetailPlanPage> {
               );
             },
           ),
-          IconButton(
-            icon: Icon(Icons.shopping_cart),
-            onPressed: () {
-              // Lógica para navegar al carrito, si es necesario
-            },
-          ),
+          Stack(
+            children: [
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CarritoPage()),
+                  );
+                },
+                icon: const Icon(Icons.shopping_cart, color: Colors.white),
+              ),
+              Positioned(
+                right: 5,
+                top: 5,
+                child: Consumer(
+                  builder: (context, ref, child) {
+                    final totalCantidad = ref
+                        .watch(carritoProvider)
+                        .fold(0, (sum, item) => sum + item['cantidad'] as int);
+
+                    return totalCantidad > 0
+                        ? CircleAvatar(
+                            backgroundColor: Colors.red,
+                            radius: 8,
+                            child: Text(
+                              totalCantidad
+                                  .toString(), // Ahora muestra la cantidad real
+                              style:
+                                  TextStyle(fontSize: 10, color: Colors.white),
+                            ),
+                          )
+                        : SizedBox(); // No mostrar si el carrito está vacío
+                  },
+                ),
+              ),
+            ],
+          )
         ],
         backgroundColor: Colors.blue,
       ),
@@ -84,6 +122,14 @@ class DetailPlanPageState extends ConsumerState<DetailPlanPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              SizedBox(
+                width: 440,
+                height: 200,
+                child: Image.asset(
+                  'assets/img/img_pesas.jpg',
+                  fit: BoxFit.cover,
+                ),
+              ),
               // Nombre del servicio en la parte superior
               Center(
                 child: Text(
@@ -442,6 +488,17 @@ class DetailPlanPageState extends ConsumerState<DetailPlanPage> {
                       )
                     ],
                   ),
+                ),
+              ),
+              SizedBox(
+                height: 16,
+              ),
+              SizedBox(
+                width: 339,
+                height: 180,
+                child: Image.asset(
+                  'assets/img/img_pesas.jpg',
+                  fit: BoxFit.cover,
                 ),
               ),
             ],
