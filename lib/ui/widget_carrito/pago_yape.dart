@@ -150,31 +150,50 @@ class PagoYapePage extends StatelessWidget {
   Future<void> _generarCargoYape(String sourceId, BuildContext context) async {
     try {
       final response = await http.post(
-        Uri.parse('http://tu-servidor/cargo_yape.php'),
+        Uri.parse(
+            'http://192.168.18.3/mystore/gull_ventas_php_project/cargo_yape.php'),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
           "source_id": sourceId,
           "email": _emailController.text.trim(),
           "amount": (total * 100).toInt(),
           "id_negocio": 2,
+          "currency": "PEN",
         }),
       );
 
+      print('🔵 [DEBUG] Respuesta del cargo_yape.php:');
+      print('          Código HTTP: ${response.statusCode}');
+      print('          Body: ${response.body}');
+
       final responseData = jsonDecode(response.body);
 
-      if (response.statusCode == 201) {
-        // Pago pendiente de confirmación
-        _message.value = "⚠ Abra su app Yape para confirmar el pago";
-        await _verificarEstadoPagoPeriodicamente(
-            responseData['culqi_id'], context);
-      } else if (response.statusCode == 200) {
+      if (response.statusCode == 200) {
         _message.value = "✅ Pago exitoso";
         await _insertarOrdenYape(context);
+      } else if (response.statusCode == 201) {
+        if (responseData.containsKey('culqi_id')) {
+          _message.value = "⚠ Abra su app Yape para confirmar el pago";
+          await _verificarEstadoPagoPeriodicamente(
+              responseData['culqi_id'], context);
+        } else {
+          _message.value =
+              "⚠ Token generado pero sin culqi_id. Verifique respuesta del servidor.";
+          print('❌ [DEBUG] culqi_id no encontrado en la respuesta');
+        }
       } else {
-        _message.value = "❌ Error: ${responseData['error']}";
+        _message.value =
+            "❌ Error inesperado: ${responseData['error'] ?? 'Respuesta inválida'}";
       }
+    } on SocketException catch (e) {
+      print('❌ [DEBUG] Error de red: $e');
+      _message.value = "Error de conexión. Verifique su red.";
+    } on FormatException catch (e) {
+      print('❌ [DEBUG] Error de formato JSON: $e');
+      _message.value = "Respuesta con formato incorrecto del servidor.";
     } catch (e) {
-      _message.value = "⚠ Error: ${e.toString()}";
+      print('❌ [DEBUG] Excepción general: $e');
+      _message.value = "Error inesperado al procesar el pago.";
     }
   }
 

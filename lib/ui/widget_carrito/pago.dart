@@ -4,11 +4,14 @@ import 'dart:convert';
 import 'package:fullventas_app/ui/widget_carrito/payment_service.dart';
 import 'package:fullventas_app/ui/widget_carrito/culqi_service.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
+import 'package:fullventas_app/infraestructure/driven_adapter/api/fullventas_api/services_data_api.dart';
+import 'package:fullventas_app/domain/models/fullventas_data/services_data.dart';
+import 'package:fullventas_app/ui/widget_carrito/ticket_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
   final Map<String, dynamic> userData;
   final String distrito;
-  final List<dynamic> productos;
+  final List<Map<String, dynamic>> productos;
   final double amount;
   final int metodoPago;
   final int estadoPago;
@@ -32,6 +35,7 @@ class PaymentScreen extends StatefulWidget {
 class _PaymentScreenState extends State<PaymentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _culqiService = CulqiService();
+  final _paymentService = PaymentService();
 
   // Controladores para los campos del formulario
   final _cardNumberController = TextEditingController();
@@ -66,35 +70,24 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   void initState() {
     super.initState();
-    print('[DEBUG] Inicializando PaymentScreen con datos:');
-    print('- UserData: ${widget.userData}');
-    print('- Distrito: ${widget.distrito}');
-    print('- Productos: ${widget.productos}');
-    print('- Total: ${widget.amount}');
-    print('- Método Pago: ${widget.metodoPago}');
-    print('- Estado Pago: ${1}');
-    print('- Sucursal: ${widget.sucursal}');
     _initializeData();
   }
 
   void _initializeData() {
-    // Precargar datos del usuario si están disponibles
+    // Precargar datos del usuario
     _emailController.text = widget.userData['email'] ?? '';
     _firstNameController.text = widget.userData['first_name'] ?? '';
     _lastNameController.text = widget.userData['last_name'] ?? '';
-
-    print('[DEBUG] Datos precargados:');
-    print('- Email: ${_emailController.text}');
-    print('- Nombre: ${_firstNameController.text}');
-    print('- Apellido: ${_lastNameController.text}');
 
     // Precargar llave pública de Culqi
     _culqiService.fetchPublicKey(widget.userData['id']);
   }
 
   Future<void> _processPayment() async {
+    print('[DEBUG] Iniciando _processPayment()');
+    print('[DEBUG] Validando formulario...');
     if (!_formKey.currentState!.validate()) {
-      print('[DEBUG] Validación del formulario falló');
+      print('[DEBUG ERROR] Validación de formulario fallida');
       return;
     }
 
@@ -104,44 +97,26 @@ class _PaymentScreenState extends State<PaymentScreen> {
     });
 
     try {
-      print('[DEBUG] Iniciando proceso de pago...');
-
-      // Validación del monto total
+      print('[DEBUG] Monto total recibido: ${widget.amount}');
       if (widget.amount <= 0) {
+        print('[DEBUG ERROR] Monto inválido: ${widget.amount}');
         throw Exception('El monto total debe ser mayor a cero');
       }
 
-      // Convertir el total a centavos (Culqi requiere el monto en centavos)
-      final amountInCents =
-          (widget.amount * 100).round(); // Usar round() para mejor precisión
+      final amountInCents = (widget.amount * 100).round();
+      print('[DEBUG] Monto convertido a centavos: $amountInCents');
 
-// Validación extendida del monto
-      print('[DEBUG] Validación de monto:');
-      print('- Total original: ${widget.amount} PEN');
+      // 1. Crear token
+      print('[DEBUG] Creando token con Culqi...');
+      print('[DEBUG] Datos para token:');
       print(
-          '- Total en centavos: $amountInCents (Tipo: ${amountInCents.runtimeType})');
-
-      if (amountInCents <= 0) {
-        throw Exception('El monto debe ser mayor a cero');
-      }
-      if (amountInCents < 100) {
-        // Culqi requiere mínimo 1 sol (100 centavos)
-        throw Exception('El monto mínimo de pago es S/1.00');
-      }
-      if (amountInCents > 9999900) {
-        // Culqi máximo normalmente 99,999 soles
-        throw Exception('El monto máximo de pago es S/99,999.00');
-      }
-
-      // 1. Crear token en Culqi
-      print('[DEBUG] Creando token en Culqi con datos:');
-      print('- CardNumber: ${_cardNumberController.text.replaceAll(' ', '')}');
+          '- Número tarjeta: ${_cardNumberController.text.replaceAll(' ', '')}');
       print('- CVV: ${_cvvController.text}');
-      print('- ExpMonth: ${_expiryMonthController.text}');
-      print('- ExpYear: ${_expiryYearController.text}');
+      print('- Mes exp: ${_expiryMonthController.text}');
+      print('- Año exp: ${_expiryYearController.text}');
       print('- Email: ${_emailController.text}');
-      print('- FirstName: ${_firstNameController.text}');
-      print('- LastName: ${_lastNameController.text}');
+      print('- Nombre: ${_firstNameController.text}');
+      print('- Apellido: ${_lastNameController.text}');
 
       final token = await _culqiService.createToken(
         usersId: widget.userData['id'],
@@ -154,88 +129,167 @@ class _PaymentScreenState extends State<PaymentScreen> {
         lastName: _lastNameController.text,
       );
 
+      print('[DEBUG] Token recibido: ${token ?? 'NULL'}');
       if (token == null) {
-        print('[ERROR] No se pudo generar el token de pago');
+        print('[DEBUG ERROR] No se pudo generar el token de pago');
         throw Exception('No se pudo generar el token de pago');
       }
 
-      print('[DEBUG] Token generado: $token');
+      // 2. Preparar productos
+      print('[DEBUG] Preparando productos para insert order...');
+      print('[DEBUG] Número de productos: ${widget.productos.length}');
 
-      // 2. Convertir productos al formato requerido
+      double totalGeneral = 0.0;
+
       final orderedProducts = widget.productos.map((producto) {
+        final servicio = producto['producto'] as ServicesData;
+        final cantidad = producto['cantidad'] ?? 1;
+        final categoria =
+            producto['tipo_categoria'] ?? servicio.category?.toString() ?? '0';
+        final previousPrice =
+            producto['previousPrice'] ?? servicio.previousPrice ?? 0.0;
+
+        final totalProducto = previousPrice * cantidad;
+        totalGeneral += totalProducto;
+
+        print('[DEBUG] Producto:');
+        print('- ID: ${servicio.id}');
+        print('- Nombre: ${servicio.title}');
+        print('- Cantidad: $cantidad');
+        print('- Tipo categoría: $categoria');
+        print('- Precio unitario: $previousPrice');
+        print('- Precio total: $totalProducto');
+
         return {
-          'product_id': producto['id']?.toString() ?? '0',
-          'quantity': producto['quantity'] ?? 1,
-          'price': (producto['price'] ?? 0.0),
+          'product_id': servicio.id ?? 0,
+          'ordered_quantity': cantidad,
+          'tipo_categoria': categoria,
+          'previousPrice': previousPrice,
+          'name': servicio.title ?? 'Producto sin nombre',
+          'product_size_id': null, // Campo requerido por la API
         };
       }).toList();
 
-      print('[DEBUG] Productos ordenados:');
-      orderedProducts.forEach((product) {
-        print(
-            '- ProductID: ${product['product_id']}, Cantidad: ${product['quantity']}, Precio: ${product['price']}');
-      });
+      print('[DEBUG] Total general: $totalGeneral');
 
-      // 3. Calcular comisión de Culqi (ejemplo: 3.7% + S/1.00)
-      final comisionCulqi = (widget.amount * 0.037).toInt();
-      print('[DEBUG] Comisión Culqi calculada: $comisionCulqi');
+      // 3. Calcular comisión
+      final comisionCulqi = (widget.amount * 0.037);
+      print('[DEBUG] Comisión calculada: $comisionCulqi');
 
-      print('[DEBUG] Procesando pago con los siguientes datos:');
-      print('- Total en centavos: $amountInCents');
-      print('- Moneda: PEN');
-      print('- Email: ${_emailController.text}');
-      print('- Token: $token');
-      print(
-          '- Nombre: ${_firstNameController.text} ${_lastNameController.text}');
-      print('- ID Usuario: ${widget.userData['id']}');
-      print('- ID Cliente: ${widget.userData['client_id'] ?? 0}');
+      // 4. Preparar datos para el pago
+      print('[DEBUG] Preparando datos para processPayment...');
+      print('[DEBUG] Datos del usuario:');
+      print('- User ID: ${widget.userData['id']}');
+      print('- Client ID: 1}');
+      print('[DEBUG] Datos de la sucursal:');
       print('- Sucursal: ${widget.sucursal}');
+      print('[DEBUG] Datos del pedido:');
       print('- Distrito: ${widget.distrito}');
-      print(
-          '- Método Pago: ${widget.metodoPago == 1 ? 'Tarjeta' : 'Efectivo'}');
-      print('- Estado Pago: ${1}');
+      print('- Método de pago: ${widget.metodoPago}');
+      print('- Estado de pago: ${widget.estadoPago}');
 
-      final paymentResult = await PaymentService().processPayment(
-        amount: amountInCents, // Enviar en centavos
+      // 5. Procesar pago
+      print('[DEBUG] Iniciando proceso de pago...');
+      final paymentResult = await _paymentService.processPayment(
+        amount: amountInCents.toDouble(),
         currency: 'PEN',
         email: _emailController.text,
         sourceId: token,
         firstName: _firstNameController.text,
         lastName: _lastNameController.text,
         orderUserId: widget.userData['id'].toString(),
-        orderClientId: widget.userData['client_id'] ?? 0,
-        orderNoti: 'Compra desde la app',
+        orderClientId: 1,
+        orderNoti: 1,
         orderSucursal: widget.sucursal,
         orderDistrito: widget.distrito,
         orderCostoEnvio: 0,
         orderComisionCulqi: comisionCulqi,
         orderedProducts: orderedProducts,
-        orderMethod: widget.metodoPago == 1 ? 'Tarjeta' : 'Efectivo',
-        orderStatus: 1,
+        orderMethod: _obtenerNombreMetodoPago(widget.metodoPago),
+        orderStatus: widget.estadoPago,
       );
 
+      print('[DEBUG] Respuesta completa de processPayment:');
+      print(paymentResult.toString());
+
       if (paymentResult['status'] == 'success') {
+        print('[DEBUG] Pago exitoso!');
+        print('- Número de ticket: ${paymentResult['ticket_number']}');
+        print('- ID de orden: ${paymentResult['order_id']}');
+        print('- Mensaje: ${paymentResult['message']}');
+
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (context) => PaymentSuccessScreen(
-              orderNumber: paymentResult['ticket_number'] ?? 'N/A',
+            builder: (context) => TicketScreen(
+              distrito: widget.distrito,
               total: widget.amount,
+              userData: widget.userData,
+              fechaHora: DateTime.now().toIso8601String(),
+              productos: orderedProducts
+                  .map((p) => {
+                        "id": p['product_id'],
+                        "qty": p['ordered_quantity'],
+                        "tipo_categoria": p['tipo_categoria'],
+                        "previousPrice": p['previousPrice'],
+                        "name": p['name'],
+                        "product_size_id": p['product_size_id'],
+                      })
+                  .toList(),
+              orderCostoEnvio: 0,
+              orderStatus: 'pagado',
+              orderID: paymentResult['order_id'],
+              orderMethod: _obtenerNombreMetodoPago(widget.metodoPago),
+              sucursalTicket: widget.sucursal,
             ),
           ),
         );
       } else {
+        print('[DEBUG ERROR] Error en processPayment:');
+        print('- Estado: ${paymentResult['status']}');
+        print('- Mensaje: ${paymentResult['message']}');
+        print('- Error: ${paymentResult['error']}');
+
         throw Exception(
             paymentResult['message'] ?? 'Error en el proceso de pago');
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('[DEBUG ERROR] Excepción capturada:');
+      print('- Tipo: ${e.runtimeType}');
+      print('- Mensaje: $e');
+      print('- StackTrace: $stackTrace');
+
       setState(() {
         _errorMessage = e.toString().replaceAll('Exception: ', '');
       });
-      print('[ERROR] Error en el proceso de pago: ${e.toString()}');
     } finally {
+      print('[DEBUG] Finalizando proceso de pago...');
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  String _obtenerNombreMetodoPago(int metodo) {
+    switch (metodo) {
+      case 0:
+        return "enGym";
+      case 1:
+        return "Tarjeta";
+      case 2:
+        return "Yape";
+      default:
+        return "Desconocido";
+    }
+  }
+
+  String _obtenerTextoEstado(int estado) {
+    switch (estado) {
+      case 0:
+        return "Pagado";
+      case 1:
+        return "Pendiente";
+      default:
+        return "Desconocido";
     }
   }
 
@@ -445,19 +499,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                       const SizedBox(height: 10),
 
-                      // Lista de productos
-                      ...widget.productos.map((producto) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                    '${producto['quantity']} x ${producto['name']}'),
-                                Text(
-                                    'S/. ${(producto['price'] * producto['quantity']).toStringAsFixed(2)}'),
-                              ],
-                            ),
-                          )),
+                      ...widget.productos.map((producto) {
+                        final servicio = producto['producto'] as ServicesData;
+                        final cantidad = producto['cantidad'] ?? 0;
+                        final previousPrice = producto['previousPrice'] ??
+                            servicio.previousPrice ??
+                            0.0;
+                        final total = previousPrice * cantidad;
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('$cantidad x ${servicio.title}'),
+                              Text('S/. ${total.toStringAsFixed(2)}'),
+                            ],
+                          ),
+                        );
+                      }),
 
                       const Divider(),
 
@@ -529,12 +589,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
 }
 
 class PaymentSuccessScreen extends StatelessWidget {
-  final String orderNumber;
+  final String order_id;
   final double total;
 
   const PaymentSuccessScreen({
     Key? key,
-    required this.orderNumber,
+    required this.order_id,
     required this.total,
   }) : super(key: key);
 
@@ -566,7 +626,7 @@ class PaymentSuccessScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               Text(
-                'Número de orden: $orderNumber',
+                'Número de orden: $order_id',
                 style: const TextStyle(fontSize: 18),
               ),
               const SizedBox(height: 10),
@@ -577,7 +637,6 @@ class PaymentSuccessScreen extends StatelessWidget {
               const SizedBox(height: 30),
               ElevatedButton(
                 onPressed: () {
-                  // Navegar al inicio o a donde corresponda
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 },
                 child: const Text('Volver al inicio'),
